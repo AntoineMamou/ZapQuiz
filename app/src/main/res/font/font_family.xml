@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        android:font="@font/beat_of_drum" />
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        android:font="@font/copyduck" />
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        android:font="@font/shanty_house" />
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="400"
+        android:font="@font/super_bubble" />
+
+    <font
+        android:fontStyle="normal"
+        android:fontWeight="800"
+        android:font="@font/bubble_bobble" />
+
+
+
+
+</font-family>
