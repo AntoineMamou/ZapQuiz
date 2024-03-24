@@ -1,5 +1,6 @@
 package fr.imt.atlantique.codesvi.app.ui.navigation
 
+import SoloScreen
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -18,7 +19,6 @@ import fr.imt.atlantique.codesvi.app.ui.screens.profile.rememberProfileState
 import fr.imt.atlantique.codesvi.app.ui.screens.shop.ShopScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.shop.rememberShopState
 
-import fr.imt.atlantique.codesvi.app.ui.screens.solo.SoloScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.solo.rememberSoloState
 
 import fr.imt.atlantique.codesvi.app.ui.screens.multi.MultiScreen
@@ -130,7 +130,8 @@ fun AppNavHost(
 
                 SoloScreen(
                     modifier = Modifier.fillMaxSize(),
-                    state = soloState //changer en shopState
+                    state = soloState, //changer en shopState
+                    navController = navController
                 )
             }
 
