@@ -6,5 +6,7 @@ plugins {
     alias(libs.plugins.kapt) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.hilt) apply false
+    id("com.google.gms.google-services") version "4.4.1" apply false
+
 }
 true // Needed to make the Suppress annotation work for the plugins block
