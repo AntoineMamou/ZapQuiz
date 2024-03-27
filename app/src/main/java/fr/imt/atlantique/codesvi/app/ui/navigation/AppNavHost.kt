@@ -27,6 +27,9 @@ import fr.imt.atlantique.codesvi.app.ui.screens.multi.rememberMultiState
 import fr.imt.atlantique.codesvi.app.ui.screens.duel.DuelScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.duel.rememberDuelState
 
+import fr.imt.atlantique.codesvi.app.ui.screens.question.QuestionScreen
+import fr.imt.atlantique.codesvi.app.ui.screens.question.rememberQuestionState
+
 import fr.imt.atlantique.codesvi.app.utils.scaleInEnterTransition
 import fr.imt.atlantique.codesvi.app.utils.scaleInPopEnterTransition
 import fr.imt.atlantique.codesvi.app.utils.scaleOutExitTransition
@@ -48,6 +51,7 @@ fun AppNavHost(
     val soloState = rememberSoloState(navController = navController)
     val multiState = rememberMultiState(navController = navController)
     val duelState = rememberDuelState(navController = navController)
+    val questionState = rememberQuestionState(navController = navController)
 
     NavHost(
         navController = navController,
@@ -160,6 +164,21 @@ fun AppNavHost(
                 DuelScreen(
                     modifier = Modifier.fillMaxSize(),
                     state =duelState
+                )
+            }
+
+            composable(
+                route = HomeRootScreen.Question.route,
+                enterTransition = { scaleInEnterTransition() },
+                exitTransition = { scaleOutExitTransition() },
+                popEnterTransition = { scaleInPopEnterTransition() },
+                popExitTransition = { scaleOutPopExitTransition() },
+            ) {
+
+                QuestionScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    state =questionState,
+                    navController = navController
                 )
             }
 

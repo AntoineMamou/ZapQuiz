@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment.Companion.CenterStart
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -42,13 +43,23 @@ val customFontFamily = FontFamily(
     Font(R.font.bubble_bobble) // Remplacez "your_custom_font" par le nom de votre fichier de police
 )
 
-
+@Composable
+fun Background()
+{
+    Image(
+        painter = painterResource(id = R.drawable.fond),
+        contentDescription = null, // Indiquez une description si nécessaire
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.FillBounds
+    )
+}
 
 @Composable
 fun BoxWithTextAndImage(
     title: String,
     imageResource: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController: NavHostController
 ) {
     Box(
         modifier = modifier
@@ -64,6 +75,10 @@ fun BoxWithTextAndImage(
                 color = MaterialTheme.colorScheme.primary,
                 shape = RoundedCornerShape(8.dp)
             )
+            .clickable (onClick= {
+                navController.navigate(HomeRootScreen.Question.route);
+                fr.imt.atlantique.codesvi.app.ui.screens.question.StartQuestion(title, "Solo",imageResource)
+            })
     ) {
         Row(
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -94,7 +109,9 @@ fun BoxWithTextAndImage(
 }
 
 @Composable
-fun BoxesGrid() {
+fun BoxesGrid(
+    navController: NavHostController
+) {
     val titles = listOf(
         "Histoire", "Géographie", "Musique", "Films","Littérature", "Autres arts",
         "Sport", "Jeux vidéo", "Sciences", "Tout thème"
@@ -142,7 +159,8 @@ fun BoxesGrid() {
                     title = titles[index],
                     imageResource = imageResources[index],
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(1f),
+                    navController
 
                 )
                 index++
@@ -152,7 +170,8 @@ fun BoxesGrid() {
                         title = titles[index],
                         imageResource = imageResources[index],
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1f),
+                        navController
 
                     )
                     index++
@@ -181,10 +200,14 @@ fun PopUpBox(
             Box(
                 modifier = Modifier
                     .width(300.dp)
-                    .background(color=MaterialTheme.colorScheme.secondary,
-                        shape = RoundedCornerShape(8.dp)) // Background color of the card
-                    .border(8.dp, color=MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(8.dp)) // Border color and width
+                    .background(
+                        color = MaterialTheme.colorScheme.secondary,
+                        shape = RoundedCornerShape(8.dp)
+                    ) // Background color of the card
+                    .border(
+                        8.dp, color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(8.dp)
+                    ) // Border color and width
             ) {
                 Column(
                     modifier = Modifier
@@ -211,7 +234,10 @@ fun PopUpBox(
                             },
                             modifier = Modifier
                                 .weight(1f)
-                                .background(color=MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(8.dp))
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
 
                         ) {
                             Text(
@@ -227,7 +253,10 @@ fun PopUpBox(
                             onClick = { onCancel() },
                             modifier = Modifier
                                 .weight(1f)
-                                .background(color=MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(8.dp))
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
                         ) {
                             Text(
                                 text ="Annuler",
@@ -278,7 +307,8 @@ fun SoloScreen(
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
-    BoxesGrid()
+    Background()
+    BoxesGrid(navController)
 
     // pop up box
     var isPopUpVisible by remember { mutableStateOf(false) }

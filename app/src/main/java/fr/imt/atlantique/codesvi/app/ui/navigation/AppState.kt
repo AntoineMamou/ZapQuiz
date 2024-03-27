@@ -40,6 +40,7 @@ class AppState(val navController: NavHostController) {
             HomeRootScreen.Solo.route -> false
             HomeRootScreen.Multi.route -> false
             HomeRootScreen.Duel.route -> false
+            HomeRootScreen.Question.route -> false
             else -> false
         }
 
