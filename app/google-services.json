@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "862032137513",
+    "project_id": "zapquiz-dbfb8",
+    "storage_bucket": "zapquiz-dbfb8.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862032137513:android:26c0804cd25449b2adfb38",
+        "android_client_info": {
+          "package_name": "fr.imt.atlantique.codesvi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTq_unrhHm0cX6jhXvh0XoYGw5830LrYs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -5,7 +5,6 @@ plugins {
     alias(libs.plugins.kapt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    //id("com.android.application")
     id("com.google.gms.google-services")
 }
 
