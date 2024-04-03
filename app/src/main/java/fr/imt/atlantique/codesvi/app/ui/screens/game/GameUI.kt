@@ -13,12 +13,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.paddingFrom
+import androidx.compose.foundation.layout.paddingFromBaseline
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,6 +51,7 @@ import fr.imt.atlantique.codesvi.app.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.Font
@@ -94,7 +98,7 @@ fun Header(settingsonClick: () -> Unit , profilOnClick: ()->Unit) {
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.SpaceBetween,
 
-    ) {
+        ) {
         // Image à gauche
 
         Column (
@@ -196,7 +200,6 @@ fun Logo(){
 
 
 //Permet de définir le mode de jeu pour le bouton start et l'image affiché parmi les 3 modes de jeu
-var modeDeJeuSelectionne = 1
 var currentIndex = 1
 
 @Composable
@@ -206,7 +209,7 @@ fun ModeDeJeu() {
     var job: Job? = null
     val itemWidth = 380.dp // Largeur de chaque élément
     //REGLER LE PROBLEME POUR ACCEDER A LA TAILLE DE L'ECRAN DU JOUEUR
-   // val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    // val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     val screenWidth = 400.dp
     val spacing = (screenWidth - itemWidth) / 2
 
@@ -218,7 +221,7 @@ fun ModeDeJeu() {
         userScrollEnabled = false,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 190.dp)
+            //.padding(top = 190.dp)
             .padding(start = spacing)
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
@@ -237,14 +240,15 @@ fun ModeDeJeu() {
                                 try {
                                     scrollState.animateScrollToItem(--currentIndex)
                                 } catch (e: Exception) {
-                                    /* Gérer l'erreur */
+
                                 }
                             }
+
                             x < 0 -> {
                                 try {
                                     scrollState.animateScrollToItem(++currentIndex)
                                 } catch (e: Exception) {
-                                    /* Gérer l'erreur */
+
                                 }
                             }
                         }
@@ -279,6 +283,7 @@ fun ModeDeJeu() {
     // Faire défiler vers l'élément initial
     LaunchedEffect(Unit) {
         scrollState.scrollToItem(currentIndex)
+
     }
 }
 
@@ -356,7 +361,8 @@ fun StartButton(navController: NavHostController) {
 
         IconButton(
             onClick = {
-                if(currentIndex == 0) {
+                if(currentIndex <= 0) {
+                    currentIndex=0
                     navController.navigate(HomeRootScreen.Duel.route)
                 }
 
@@ -364,13 +370,14 @@ fun StartButton(navController: NavHostController) {
                     navController.navigate(HomeRootScreen.Solo.route)
                 }
 
-                if(currentIndex == 2) {
+                if(currentIndex >= 2) {
+                    currentIndex=2
                     navController.navigate(HomeRootScreen.Multi.route)
                 }
-                      },
+            },
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .offset(y = (420).dp)
+                .align(Alignment.Center)
+                //.offset(y = (420).dp)
                 .height(170.dp)
                 .size(200.dp),
 
@@ -385,6 +392,38 @@ fun StartButton(navController: NavHostController) {
     }
 }
 
+@Composable
+fun Centre(navController: NavHostController) {
+    val parentHeight = remember { mutableStateOf(0) }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .padding(top=200.dp)
+            .onGloballyPositioned { coordinates ->
+                parentHeight.value = coordinates.size.height
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .height(parentHeight.value.dp)
+        ) {
+            Column(
+                verticalArrangement = Arrangement.Center, // Ajout de l'espacement vertical
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                val y=(parentHeight.value - 250 - 200)/10
+                Spacer(modifier = Modifier.height(y.dp))
+                ModeDeJeu()
+
+                StartButton(navController = navController)
+                Spacer(modifier = Modifier.height(y.dp))
+            }
+        }
+    }
+}
 
 
 @Composable
@@ -445,87 +484,87 @@ fun SettingsWindow(onClose: () -> Unit) {
 
     ) {
 
-            Box(
-                modifier = Modifier
-                    .size(windowWidth, windowHeight)
-                    .align(Alignment.TopEnd)
-                    .padding(3.dp) // Ajouter une marge pour l'espacement
-                    .background(colorResource(id = R.color.blue_2), RoundedCornerShape(15.dp))
-                    .clickable(enabled = false, onClickLabel = null, role = null, onClick = {})
-                    .border(5.dp, colorResource(id = R.color.black), RoundedCornerShape(15.dp))
+        Box(
+            modifier = Modifier
+                .size(windowWidth, windowHeight)
+                .align(Alignment.TopEnd)
+                .padding(3.dp) // Ajouter une marge pour l'espacement
+                .background(colorResource(id = R.color.blue_2), RoundedCornerShape(15.dp))
+                .clickable(enabled = false, onClickLabel = null, role = null, onClick = {})
+                .border(5.dp, colorResource(id = R.color.black), RoundedCornerShape(15.dp))
 
 
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.Top,
-                    horizontalAlignment = Alignment.CenterHorizontally
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Paramètres",
-                            fontSize = 20.sp,
-                            fontFamily = fontPrincipale,
-                            color = colorResource(id = R.color.white),
-                            modifier = Modifier.weight(1f) // Aligner le texte à gauche
-                        )
-
-                        Spacer(modifier = Modifier.width(16.dp)) // Espacement entre le texte et l'image
-
-                        Image(
-                            painter = painterResource(id = R.drawable.roue_parametre),
-                            contentDescription = "parametres", // Indiquez une description si nécessaire
-                            modifier = Modifier
-                                .size(30.dp) // Ajuster la taille de l'image selon vos besoins
-                                .clickable(onClick = onClose)
-                        )
-                    }
-
-                    HorizontalBar()
-
-                    SettingsRow(text = "Effets sonores")
-
-                    HorizontalBar()
-
-                    SettingsRow(text = "Notifications")
-
-                    HorizontalBar()
-
-                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Crédits",
+                        text = "Paramètres",
                         fontSize = 20.sp,
                         fontFamily = fontPrincipale,
-                        color = colorResource(id = R.color.white)
+                        color = colorResource(id = R.color.white),
+                        modifier = Modifier.weight(1f) // Aligner le texte à gauche
                     )
 
-                    HorizontalBar()
-                    Spacer(modifier = Modifier.height(7.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "Se déconnecter",
-                            fontSize = 20.sp,
-                            fontFamily = fontPrincipale,
-                            color = colorResource(id = R.color.white),
-                            modifier = Modifier.weight(1f) // Aligner le texte à gauche
-                        )
+                    Spacer(modifier = Modifier.width(16.dp)) // Espacement entre le texte et l'image
 
-                        Spacer(modifier = Modifier.width(16.dp)) // Espacement entre le texte et l'image
-
-                        Image(
-                            painter = painterResource(id = R.drawable.deconnexion),
-                            contentDescription = "deconnexion", // Indiquez une description si nécessaire
-                            modifier = Modifier.size(40.dp) // Ajuster la taille de l'image selon vos besoins
-                        )
-                    }
-
+                    Image(
+                        painter = painterResource(id = R.drawable.roue_parametre),
+                        contentDescription = "parametres", // Indiquez une description si nécessaire
+                        modifier = Modifier
+                            .size(30.dp) // Ajuster la taille de l'image selon vos besoins
+                            .clickable(onClick = onClose)
+                    )
                 }
+
+                HorizontalBar()
+
+                SettingsRow(text = "Effets sonores")
+
+                HorizontalBar()
+
+                SettingsRow(text = "Notifications")
+
+                HorizontalBar()
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Crédits",
+                    fontSize = 20.sp,
+                    fontFamily = fontPrincipale,
+                    color = colorResource(id = R.color.white)
+                )
+
+                HorizontalBar()
+                Spacer(modifier = Modifier.height(7.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Se déconnecter",
+                        fontSize = 20.sp,
+                        fontFamily = fontPrincipale,
+                        color = colorResource(id = R.color.white),
+                        modifier = Modifier.weight(1f) // Aligner le texte à gauche
+                    )
+
+                    Spacer(modifier = Modifier.width(16.dp)) // Espacement entre le texte et l'image
+
+                    Image(
+                        painter = painterResource(id = R.drawable.deconnexion),
+                        contentDescription = "deconnexion", // Indiquez une description si nécessaire
+                        modifier = Modifier.size(40.dp) // Ajuster la taille de l'image selon vos besoins
+                    )
+                }
+
             }
+        }
     }
 }
 
@@ -576,14 +615,14 @@ fun GridProfilComponent(){
     ){
 
         Column(
-          verticalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
-      ) {
+        ) {
             ProfilComponent(textTitre = "Victoires", textResultat = "150" )
             Spacer(modifier = Modifier.height(16.dp))
             ProfilComponent(textTitre = "Meilleurs Trophées", textResultat ="1600")
-      }
-        
+        }
+
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(
@@ -727,7 +766,7 @@ fun ProfilWindow(onClose: () -> Unit){
                 GridProfilComponent()
 
                 HorizontalBar()
-                
+
                 Button(onClick = { /*TODO*/ }) {
                     Text(text = "Voir le classement")
                 }
@@ -771,9 +810,11 @@ fun GameScreen(
     BackgroundImage()
     Header ({ settingsModalVisible = true} , {profilVisible=true })
     Logo()
-    MainGame()
-    ModeDeJeu()
-    StartButton(navController)
+    //MainGame()
+    //ModeDeJeu()
+    //StartButton(navController)
+    Centre(navController)
+
 
 
 

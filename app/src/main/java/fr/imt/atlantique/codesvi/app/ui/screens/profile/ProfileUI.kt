@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +38,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,6 +46,7 @@ import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.fontChiffre
+import timber.log.Timber
 
 val fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
 
@@ -88,7 +93,7 @@ fun Main(){
                 TextField(
                     value = searchText,
                     onValueChange = { searchText = it },
-                    placeholder = { Text(text = "Rechercher #...") },
+                    placeholder = { Text(text = "Rechercher ...") },
                     modifier = Modifier
                         .width(215.dp)
                         .border(
@@ -105,6 +110,13 @@ fun Main(){
                         focusedPlaceholderColor = Color.White,
                         unfocusedPlaceholderColor = Color.White
                     ),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done // Définir l'action IME sur "Done"
+                    ),
+                    keyboardActions = KeyboardActions(onDone = {
+                        // Exécuter votre fonction ici
+                        searchText= TextFieldValue("")
+                    }),
                 )
             }
         }
@@ -122,7 +134,7 @@ fun AfficheListe(amis: List<String>) {
         state = scrollState,
         modifier = Modifier
             .fillMaxWidth()
-            .height(700.dp)
+            .fillMaxHeight()
             .padding(top = 190.dp)
     ) {
         items(amis.size) { index ->
@@ -144,8 +156,8 @@ fun AfficheListe(amis: List<String>) {
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                                    .padding(start = 5.dp)
-                                    .width(100.dp)
+                            .padding(start = 5.dp)
+                            .width(100.dp)
 
                     ){
 
