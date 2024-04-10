@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -37,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,20 +45,17 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.navigation.compose.rememberNavController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.QCM
-import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
+import fr.imt.atlantique.codesvi.app.data.model.Reponse
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
+import java.text.Normalizer
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.random.Random
@@ -81,6 +76,16 @@ fun Background()
     )
 }
 
+fun removeAccentsAndUpperCase(word: String): String {
+    // Convertir le mot en minuscules
+    var lowerCaseWord = word.toLowerCase()
+
+    // Retirer les accents en utilisant la décomposition canonique
+    val normalizedWord = Normalizer.normalize(lowerCaseWord, Normalizer.Form.NFD)
+    val regex = "\\p{InCombiningDiacriticalMarks}+".toRegex()
+    return regex.replace(normalizedWord, "")
+}
+
 
 var categorie = ""
 var gameMode = ""
@@ -90,7 +95,7 @@ fun StartQuestion(
     theme : String,
     game_mode : String,
     logoId : Int) {
-    categorie = theme
+    categorie = removeAccentsAndUpperCase(theme)
     gameMode = game_mode
     logo=logoId
 }
@@ -278,29 +283,44 @@ fun QuestionVraiFaux(onClick: () -> Unit) {
     }
 
 
-fun questions(ref : Int): List<String> {
-    if (ref == 0){
-        return listOf("Quel est la capital de la France ?", "Paris", "Marseille", "Lyon", "Lille")
-    }
-    if (ref == 1){
-        return listOf("Quel fleuve n'est pas présent en France ?", "Le Danube", "Le Rhin", "La Seine", "La Garonne" )
-    }
-    if (ref == 2){
-        return listOf("Quel est le pays le plus peuplée ?", "Inde", "Andorre", "Chine", "Russie" )
-    }
-    return TODO("Provide the return value")
-}
 
 suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {
     return suspendCancellableCoroutine { continuation ->
         val questionsRef = databaseGlobal.getReference("questions/$theme")
-
         val valueEventListener = object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 for (questionSnapshot in dataSnapshot.children) {
                     val questionId = questionSnapshot.key?.toIntOrNull()
                     if (questionId == randomNumber) {
-                        val question = questionSnapshot.getValue(QCM::class.java)
+                        //val question = questionSnapshot.getValue(QCM::class.java)
+
+
+
+                        val id = questionSnapshot.child("id").getValue(String::class.java)
+                        val type = questionSnapshot.child("type").getValue(String::class.java)
+                        val category = questionSnapshot.child("category").getValue(String::class.java)
+                        val level = questionSnapshot.child("level").getValue(Int::class.java)
+                        val question2 = questionSnapshot.child("question").getValue(String::class.java)
+                        val image = questionSnapshot.child("image").getValue(String::class.java)
+                        val gap = questionSnapshot.child("gap").getValue(Float::class.java)
+                        val explanation = questionSnapshot.child("explanation").getValue(String::class.java)
+
+                        // Récupération de la liste des réponses
+                        val answersList = ArrayList<Reponse>()
+                        val answersSnapshot = questionSnapshot.child("answers")
+                        for (answerSnapshot in answersSnapshot.children) {
+                            val answer = answerSnapshot.child("answer").getValue(String::class.java)
+                            val isRight = answerSnapshot.child("isRight").getValue(Boolean::class.java)
+                            if (answer != null && isRight != null) {
+                                val reponse= Reponse(isRight,answer)
+                                answersList.add(reponse)
+
+                            }
+                        }
+
+                        // Création de l'objet QCM avec les données récupérées
+                        val question = QCM(answersList, id?:"", type?:"", category?:"", level ?: 0, question2 ?: "", image ?: "", gap ?: 0F, explanation ?: "")
+
                         continuation.resume(question)
                         return
                     }
@@ -332,7 +352,7 @@ fun QuestionChoixMultiple(onClick: () -> Unit) {
     val qcmState = remember { mutableStateOf<QCM?>(null) }
 
     LaunchedEffect(randomIndex) {
-        val question = questionFromDatabase("geographie_questions", randomIndex)
+        val question = questionFromDatabase(categorie, randomIndex)
         qcmState.value = question
     }
 
@@ -341,7 +361,6 @@ fun QuestionChoixMultiple(onClick: () -> Unit) {
         println(qcm)
         val liste = qcm.answers
         val Questiontxt = qcm.question
-        println(liste)
 
 
         PanneauQuestion(300, 350, Questiontxt)
@@ -357,8 +376,8 @@ fun QuestionChoixMultiple(onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                BoutonQCM(liste[0].reponse, onClick, liste[0].bonne_réponse)
-                BoutonQCM(liste[1].reponse, onClick, liste[1].bonne_réponse)
+                BoutonQCM(liste[0].answer, onClick, liste[0].isRight)
+                BoutonQCM(liste[1].answer, onClick, liste[1].isRight)
             }
 
             Row(
@@ -366,8 +385,8 @@ fun QuestionChoixMultiple(onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                BoutonQCM(liste[2].reponse, onClick, liste[2].bonne_réponse)
-                BoutonQCM(liste[3].reponse, onClick, liste[3].bonne_réponse)
+                BoutonQCM(liste[2].answer, onClick, liste[2].isRight)
+                BoutonQCM(liste[3].answer, onClick, liste[3].isRight)
             }
         }
     }
