@@ -17,6 +17,7 @@ compose-navigation = "2.7.7"
 material3-windowsize = "1.2.0"
 room = "2.6.1"
 coroutines = "1.7.1"
+play-services-pal = "20.2.0"
 
 [libraries]
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
@@ -47,6 +48,7 @@ androidx-room = { group = "androidx.room", name = "room-runtime", version.ref = 
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+play-services-pal = { group = "com.google.android.gms", name = "play-services-pal", version.ref = "play-services-pal" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

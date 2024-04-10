@@ -59,6 +59,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ktx.database
+import com.google.firebase.ktx.Firebase
 import fr.imt.atlantique.codesvi.app.ui.navigation.AppState
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.navigation.rememberAppState
@@ -787,6 +790,8 @@ fun GameScreen(
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+
+
 
     //Permet de gérer l'affichage ou non de la fenêtre des paramètres
     var settingsModalVisible by remember { mutableStateOf(false) }

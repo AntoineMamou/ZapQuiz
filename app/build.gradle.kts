@@ -83,6 +83,7 @@ dependencies {
     // des librairies de hilt
     implementation(libs.android.hilt)
     implementation(libs.hiltnav.compose)
+    implementation(libs.play.services.pal)
     kapt(libs.hilt.android.compiler)
 
     // des libreries de database
@@ -111,6 +112,12 @@ dependencies {
     //Firebase
     implementation(platform("com.google.firebase:firebase-bom:32.7.4"))
     implementation("com.google.firebase:firebase-analytics")
+
+    implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx:21.0.1")
+    //implementation("com.google.firebase:firebase-storage-ktx:21.0.1")
+
+
 
 
 

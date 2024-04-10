@@ -2,6 +2,7 @@ package fr.imt.atlantique.codesvi.app
 
 
 import android.app.Application
+import com.google.firebase.BuildConfig
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 
@@ -10,7 +11,11 @@ class Application : Application() {
     override fun onCreate() {
         super.onCreate()
         // Plant Timber pour les logs
+
         Timber.plant(Timber.DebugTree())
+
+
+
     }
 }
 

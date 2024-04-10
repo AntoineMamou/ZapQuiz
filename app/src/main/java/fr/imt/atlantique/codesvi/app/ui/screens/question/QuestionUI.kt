@@ -152,18 +152,18 @@ fun BoutonQCM(text: String) {
 
 @Composable
 fun ChangerQuestion() {
-    val randomIndex = Random.nextInt(4) // Génère un nombre aléatoire entre 0 et 9
+    val randomIndex = Random.nextInt(3) // Génère un nombre aléatoire entre 0 et 9
     // Utilisez randomIndex pour changer la question en fonction du nombre aléatoire généré
-    if (randomIndex == 1) {
+    if (randomIndex == 0) {
         QuestionVraiFaux()
     }
-    if (randomIndex == 2) {
+    if (randomIndex == 1) {
         QuestionChoixMultiple()
     }
-    if (randomIndex == 3) {
+    if (randomIndex == 2) {
         QuestionLiens()
     }
-    if (randomIndex == 4) {
+    if (randomIndex == 3) {
         QuestionText()
     }
 }
