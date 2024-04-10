@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
+import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 
@@ -129,14 +130,14 @@ fun PanneauQuestion(Hauteur : Int, Largeur : Int, Description : String){
 }
 
 @Composable
-fun BoutonQCM(text: String) {
+fun BoutonQCM(text: String, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .padding(vertical = 15.dp, horizontal = 30.dp)
                 .size(140.dp, 80.dp)
                 .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(20.dp))
                 .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
-
+                .clickable(onClick = onClick)
 
         ) {
             Text(
@@ -151,25 +152,25 @@ fun BoutonQCM(text: String) {
 
 
 @Composable
-fun ChangerQuestion() {
+fun ChangerQuestion(onClick: () -> Unit) {
     val randomIndex = Random.nextInt(3) // Génère un nombre aléatoire entre 0 et 9
     // Utilisez randomIndex pour changer la question en fonction du nombre aléatoire généré
     if (randomIndex == 0) {
-        QuestionVraiFaux()
+        QuestionVraiFaux(onClick)
     }
     if (randomIndex == 1) {
-        QuestionChoixMultiple()
+        QuestionChoixMultiple(onClick)
     }
     if (randomIndex == 2) {
-        QuestionLiens()
+        QuestionLiens(onClick)
     }
     if (randomIndex == 3) {
-        QuestionText()
+        QuestionText(onClick)
     }
 }
 
 @Composable
-fun QuestionVraiFaux() {
+fun QuestionVraiFaux(onClick: () -> Unit) {
 
     PanneauQuestion(300, 350, "Répondre par Vrai ou Faux ?")
     Column(
@@ -189,6 +190,7 @@ fun QuestionVraiFaux() {
                 .size(140.dp, 80.dp)
                 .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(20.dp))
                 .border(5.dp, color = Color.Green, RoundedCornerShape(20.dp))
+                .clickable(onClick = onClick)
 
                 )
 
@@ -205,6 +207,7 @@ fun QuestionVraiFaux() {
                         RoundedCornerShape(20.dp)
                     )
                     .border(5.dp, color = Color.Red, RoundedCornerShape(20.dp))
+                    .clickable(onClick = onClick)
             ) {
                 Text(text = "FAUX", color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.align(Alignment.Center), fontFamily = fontPrincipale)
             }
@@ -218,7 +221,7 @@ fun QuestionVraiFaux() {
 
 
 @Composable
-fun QuestionChoixMultiple(){
+fun QuestionChoixMultiple(onClick: () -> Unit){
     PanneauQuestion(300,350, "Choisissez la bonne réponse")
     Column(
         modifier = Modifier
@@ -232,8 +235,8 @@ fun QuestionChoixMultiple(){
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 1")
-            BoutonQCM(text = "Choix 2")
+            BoutonQCM(text = "Choix 1", onClick)
+            BoutonQCM(text = "Choix 2", onClick)
         }
 
         Row(
@@ -241,8 +244,8 @@ fun QuestionChoixMultiple(){
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 3")
-            BoutonQCM(text = "Choix 4")
+            BoutonQCM(text = "Choix 3", onClick)
+            BoutonQCM(text = "Choix 4", onClick)
 
 
             // Autres éléments que vous souhaitez inclure dans la rangée
@@ -252,7 +255,7 @@ fun QuestionChoixMultiple(){
 }
 
 @Composable
-fun QuestionLiens() {
+fun QuestionLiens(onClick: () -> Unit) {
     PanneauQuestion(Hauteur = 100, Largeur = 350, "Assembler les colonnes ensembles")
     Column(
         modifier = Modifier
@@ -266,8 +269,8 @@ fun QuestionLiens() {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 1")
-            BoutonQCM(text = "Choix 2")
+            BoutonQCM(text = "Choix 1", onClick)
+            BoutonQCM(text = "Choix 2", onClick)
         }
 
         Row(
@@ -275,8 +278,8 @@ fun QuestionLiens() {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 3")
-            BoutonQCM(text = "Choix 4")
+            BoutonQCM(text = "Choix 3", onClick)
+            BoutonQCM(text = "Choix 4", onClick)
 
 
             // Autres éléments que vous souhaitez inclure dans la rangée
@@ -286,8 +289,8 @@ fun QuestionLiens() {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 5")
-            BoutonQCM(text = "Choix 6")
+            BoutonQCM(text = "Choix 5", onClick)
+            BoutonQCM(text = "Choix 6", onClick)
 
 
             // Autres éléments que vous souhaitez inclure dans la rangée
@@ -297,8 +300,8 @@ fun QuestionLiens() {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 7")
-            BoutonQCM(text = "Choix 8")
+            BoutonQCM(text = "Choix 7", onClick)
+            BoutonQCM(text = "Choix 8", onClick)
 
 
             // Autres éléments que vous souhaitez inclure dans la rangée
@@ -306,7 +309,7 @@ fun QuestionLiens() {
     }
 }
 @Composable
-fun QuestionText() {
+fun QuestionText(onClick: () -> Unit) {
     PanneauQuestion(Hauteur = 300, Largeur = 350, "Ecriver la bonne réponse")
     Column(
         modifier = Modifier
@@ -343,7 +346,7 @@ fun QuestionText() {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ){
-            BoutonQCM(text = "Envoyer")
+            BoutonQCM(text = "Envoyer", onClick)
         }
     }
 }
@@ -401,9 +404,17 @@ fun ProgressBar() {
 @Composable
 fun Global(){
 
+    var currentContent by remember { mutableStateOf(0) }
+
     if (gameMode == "Solo") {
         ProgressBar()
-        ChangerQuestion()
+        // Button to change the currentContent state
+        // Display content based on currentContent state
+        when (currentContent) {
+            0 -> ChangerQuestion(onClick = { currentContent = 1-currentContent})
+            1 -> ChangerQuestion(onClick = { currentContent = 1-currentContent })
+            // Add more cases as needed
+        }
 
 
 
