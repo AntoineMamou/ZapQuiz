@@ -113,7 +113,7 @@ fun BoxesGrid(
     navController: NavHostController
 ) {
     val titles = listOf(
-        "Histoire", "Géographie", "Musique", "Films","Littérature", "Autres arts",
+        "Histoire", "Géographie", "Musique", "Cinéma","Littérature", "Autres arts",
         "Sport", "Jeux vidéo", "Sciences", "Tout thème"
     )
 
