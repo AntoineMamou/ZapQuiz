@@ -83,7 +83,8 @@ dependencies {
     // des librairies de hilt
     implementation(libs.android.hilt)
     implementation(libs.hiltnav.compose)
-    implementation(libs.play.services.pal)
+    //implementation(libs.play.services.pal)
+    implementation("com.google.android.gms:play-services-pal:20.2.0")
     kapt(libs.hilt.android.compiler)
 
     // des libreries de database
