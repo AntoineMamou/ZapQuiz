@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Column
 
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +35,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -76,6 +78,9 @@ fun StartQuestion(
 }
 
 val  fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
+
+var Reponse by mutableStateOf(true)
+
 @Composable
 fun PanneauQuestion(Hauteur : Int, Largeur : Int, Description : String){
     Column ( modifier = Modifier
@@ -115,13 +120,7 @@ fun PanneauQuestion(Hauteur : Int, Largeur : Int, Description : String){
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.End,
             ){
-                Image(
-                    painter = painterResource(id = logo),
-                    contentDescription = "femer", // Indiquez une description si nécessaire
-                    modifier = Modifier
-                        .size(40.dp) // Ajuster la taille de l'image selon vos besoins
 
-                )
             }
         }
 
@@ -129,19 +128,29 @@ fun PanneauQuestion(Hauteur : Int, Largeur : Int, Description : String){
     }
 }
 
+
+
 @Composable
-fun BoutonQCM(text: String, onClick: () -> Unit) {
+fun BoutonQCM(textbouton: String, onClick: () -> Unit, textreponse: String) {
+    var reponse = false
+    if (textbouton == textreponse){
+        reponse = true
+    }
         Box(
             modifier = Modifier
                 .padding(vertical = 15.dp, horizontal = 30.dp)
                 .size(140.dp, 80.dp)
                 .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(20.dp))
                 .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
-                .clickable(onClick = onClick)
+                .clickable(onClick = {
+                    onClick()
+                    Reponse = reponse
+                })
+
 
         ) {
             Text(
-                text = text,
+                text = textbouton,
                 color = Color.White,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.Center),
@@ -151,22 +160,58 @@ fun BoutonQCM(text: String, onClick: () -> Unit) {
     }
 
 
+
+var NombreQuestion = -1
+var NombreDeVies = 3
+
 @Composable
-fun ChangerQuestion(onClick: () -> Unit) {
+fun GenererQuestion(onClick: () -> Unit){
     val randomIndex = Random.nextInt(3) // Génère un nombre aléatoire entre 0 et 9
     // Utilisez randomIndex pour changer la question en fonction du nombre aléatoire généré
+
     if (randomIndex == 0) {
-        QuestionVraiFaux(onClick)
+        QuestionChoixMultiple(onClick)
     }
     if (randomIndex == 1) {
         QuestionChoixMultiple(onClick)
     }
     if (randomIndex == 2) {
-        QuestionLiens(onClick)
+        QuestionChoixMultiple(onClick)
     }
-    if (randomIndex == 3) {
-        QuestionText(onClick)
+}
+
+@Composable
+fun ReponseQuestion(textreponse : String){
+    PanneauQuestion(Hauteur = 400 , Largeur = 450, Description = textreponse )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth()
+    ){
+
     }
+}
+
+
+
+
+@Composable
+fun ChangerQuestion(onClick: () -> Unit) {
+
+         if (Reponse) {
+            GenererQuestion (onClick)
+             NombreQuestion += 1
+         }else if (!Reponse) {
+            NombreDeVies = NombreDeVies - 1
+            if (NombreDeVies == 0){
+                GameOver()
+            }else {
+                GenererQuestion(onClick)
+            }
+        }
+
+
+
 }
 
 @Composable
@@ -218,11 +263,37 @@ fun QuestionVraiFaux(onClick: () -> Unit) {
     }
 
 
+fun questions(ref : Int): List<String> {
+    if (ref == 0){
+        return listOf("Quel est la capital de la France ?", "Paris", "Marseille", "Lyon", "Lille")
+    }
+    if (ref == 1){
+        return listOf("Quel fleuve n'est pas présent en France ?", "Le Danube", "Le Rhin", "La Seine", "La Garonne" )
+    }
+    if (ref == 2){
+        return listOf("Quel est le pays le plus peuplée ?", "Inde", "Andorre", "Chine", "Russie" )
+    }
+    return TODO("Provide the return value")
+}
+
+
+
 
 
 @Composable
 fun QuestionChoixMultiple(onClick: () -> Unit){
-    PanneauQuestion(300,350, "Choisissez la bonne réponse")
+    val randomIndex = Random.nextInt(3)
+    val liste = questions(randomIndex)
+    val Questiontxt = liste.get(0)
+    val Reponsebonne = liste.get(1)
+
+
+    val listereponse = (liste.drop(1)).shuffled()
+    print(listereponse)
+
+
+
+    PanneauQuestion(300,350, Questiontxt)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -235,8 +306,8 @@ fun QuestionChoixMultiple(onClick: () -> Unit){
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 1", onClick)
-            BoutonQCM(text = "Choix 2", onClick)
+            BoutonQCM(listereponse.get(0), onClick, Reponsebonne)
+            BoutonQCM(listereponse.get(1), onClick, Reponsebonne)
         }
 
         Row(
@@ -244,8 +315,8 @@ fun QuestionChoixMultiple(onClick: () -> Unit){
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 3", onClick)
-            BoutonQCM(text = "Choix 4", onClick)
+            BoutonQCM(listereponse.get(2), onClick, Reponsebonne)
+            BoutonQCM(listereponse.get(3), onClick, Reponsebonne)
 
 
             // Autres éléments que vous souhaitez inclure dans la rangée
@@ -254,7 +325,9 @@ fun QuestionChoixMultiple(onClick: () -> Unit){
 
 }
 
+/*
 @Composable
+
 fun QuestionLiens(onClick: () -> Unit) {
     PanneauQuestion(Hauteur = 100, Largeur = 350, "Assembler les colonnes ensembles")
     Column(
@@ -269,8 +342,8 @@ fun QuestionLiens(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 1", onClick)
-            BoutonQCM(text = "Choix 2", onClick)
+            BoutonQCM(text = "Choix 1", onClick, true)
+            BoutonQCM(text = "Choix 2", onClick, true)
         }
 
         Row(
@@ -278,8 +351,8 @@ fun QuestionLiens(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 3", onClick)
-            BoutonQCM(text = "Choix 4", onClick)
+            BoutonQCM(text = "Choix 3", onClick, true)
+            BoutonQCM(text = "Choix 4", onClick, true)
 
 
             // Autres éléments que vous souhaitez inclure dans la rangée
@@ -289,8 +362,8 @@ fun QuestionLiens(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 5", onClick)
-            BoutonQCM(text = "Choix 6", onClick)
+            BoutonQCM(text = "Choix 5", onClick, true)
+            BoutonQCM(text = "Choix 6", onClick, true)
 
 
             // Autres éléments que vous souhaitez inclure dans la rangée
@@ -300,14 +373,16 @@ fun QuestionLiens(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            BoutonQCM(text = "Choix 7", onClick)
-            BoutonQCM(text = "Choix 8", onClick)
+            BoutonQCM(text = "Choix 7", onClick, true)
+            BoutonQCM(text = "Choix 8", onClick, true)
 
 
             // Autres éléments que vous souhaitez inclure dans la rangée
         }
     }
 }
+*/
+
 @Composable
 fun QuestionText(onClick: () -> Unit) {
     PanneauQuestion(Hauteur = 300, Largeur = 350, "Ecriver la bonne réponse")
@@ -346,59 +421,76 @@ fun QuestionText(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ){
-            BoutonQCM(text = "Envoyer", onClick)
+            BoutonQCM("Envoyer", onClick, "Envoyer")
         }
     }
 }
 
 @Composable
-fun ProgressBar() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth() // Prend toute la largeur disponible
-            .height(100.dp)
-            .background(
-                color = MaterialTheme.colorScheme.primary,
-                shape = RoundedCornerShape(bottomEnd = 20.dp, bottomStart = 20.dp)
-            )
-        // Crée une forme avec des bords arrondis seulement en haut
-    ) {
+fun ProgressBar(coeur : Int, serieQuestion : Int) {
+
         Box(
             modifier = Modifier
-                .fillMaxWidth(0.8f) // Prend 50% de la largeur de la Box parent
-                .height(20.dp) // Hauteur de la barre de progression
-                .background(color = Color.LightGray)
-                .align(Alignment.TopStart) // Aligner la barre de progression verte en bas à gauche
-
+                .fillMaxWidth() // Prend toute la largeur disponible
+                .height(100.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(bottomEnd = 20.dp, bottomStart = 20.dp)
+                )
+            // Crée une forme avec des bords arrondis seulement en haut
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.8f) // Prend 80% de la largeur de la Box parent
-                    .fillMaxHeight() // Hauteur de la barre de progression
-                    .background(color = Color.Green)
-
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.Center
             ) {
-
+                Text(
+                    text = " $serieQuestion questions réussis",
+                    color = MaterialTheme.colorScheme.secondary,
+                    fontFamily = fontPrincipale,
+                    // Aligner le texte au centre de la Row
+                )
             }
+
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier
+                    .padding(bottom = 20.dp, end = 10.dp)
+                    .align(Alignment.CenterEnd)
+            ) {
+                Image(
+                    painter = painterResource(id = logo),
+                    contentDescription = "femer", // Indiquez une description si nécessaire
+                    modifier = Modifier
+                        .size(60.dp) // Ajuster la taille de l'image selon vos besoins
+
+                )
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier
+                    .padding(bottom = 20.dp)
+                    .align(Alignment.BottomCenter)
+            ) {
+                repeat(coeur) {
+                    Image(
+                        painter = painterResource(id = R.drawable.coeur),
+                        contentDescription = "fermer", // Indiquez une description si nécessaire
+                        modifier = Modifier.size(40.dp) // Ajuster la taille de l'image selon vos besoins
+                    )
+                    Spacer(modifier = Modifier.width(20.dp))
+                }
+            }
+
 
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.5f) // Prend 30% de la largeur de la Box parent
-                .height(20.dp) // Hauteur de la barre de progression
-                .background(color = Color.LightGray)
-                .align(Alignment.BottomStart) // Aligner la barre de progression rouge en bas à droite
-        ) {Box(
-            modifier = Modifier
-                .fillMaxWidth(0.8f) // Prend 80% de la largeur de la Box parent
-                .fillMaxHeight() // Hauteur de la barre de progression
-                .background(color = Color.Red)
-        )}
+}
 
-
-    }
-
+@Composable
+fun GameOver(){
+    PanneauQuestion(Hauteur = 450, Largeur = 400, Description = "Vous avez perdu")
 }
 
 @Composable
@@ -407,14 +499,18 @@ fun Global(){
     var currentContent by remember { mutableStateOf(0) }
 
     if (gameMode == "Solo") {
-        ProgressBar()
-        // Button to change the currentContent state
-        // Display content based on currentContent state
-        when (currentContent) {
-            0 -> ChangerQuestion(onClick = { currentContent = 1-currentContent})
-            1 -> ChangerQuestion(onClick = { currentContent = 1-currentContent })
-            // Add more cases as needed
-        }
+
+
+            // Button to change the currentContent state
+            // Display content based on currentContent state
+            when (currentContent) {
+                0 -> ChangerQuestion(onClick = { currentContent = 1 - currentContent })
+
+                1 -> ChangerQuestion(onClick = { currentContent = 1 - currentContent })
+                // Add more cases as needed
+            }
+            println(NombreDeVies)
+            ProgressBar(NombreDeVies, NombreQuestion)
 
 
 
