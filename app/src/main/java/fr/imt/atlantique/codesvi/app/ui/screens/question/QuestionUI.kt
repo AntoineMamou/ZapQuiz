@@ -1,5 +1,6 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.question
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
@@ -36,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,10 +48,26 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.QCM
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import timber.log.Timber
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.random.Random
+
+
+
+val databaseGlobal = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
 
 
 @Composable
@@ -131,11 +149,8 @@ fun PanneauQuestion(Hauteur : Int, Largeur : Int, Description : String){
 
 
 @Composable
-fun BoutonQCM(textbouton: String, onClick: () -> Unit, textreponse: String) {
-    var reponse = false
-    if (textbouton == textreponse){
-        reponse = true
-    }
+fun BoutonQCM(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
+
         Box(
             modifier = Modifier
                 .padding(vertical = 15.dp, horizontal = 30.dp)
@@ -144,7 +159,7 @@ fun BoutonQCM(textbouton: String, onClick: () -> Unit, textreponse: String) {
                 .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
                 .clickable(onClick = {
                     onClick()
-                    Reponse = reponse
+                    Reponse = reponsebonne
                 })
 
 
@@ -276,54 +291,89 @@ fun questions(ref : Int): List<String> {
     return TODO("Provide the return value")
 }
 
+suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {
+    return suspendCancellableCoroutine { continuation ->
+        val questionsRef = databaseGlobal.getReference("questions/$theme")
 
+        val valueEventListener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                for (questionSnapshot in dataSnapshot.children) {
+                    val questionId = questionSnapshot.key?.toIntOrNull()
+                    if (questionId == randomNumber) {
+                        val question = questionSnapshot.getValue(QCM::class.java)
+                        continuation.resume(question)
+                        return
+                    }
+                }
+                continuation.resume(null)
+            }
 
-
-
-@Composable
-fun QuestionChoixMultiple(onClick: () -> Unit){
-    val randomIndex = Random.nextInt(3)
-    val liste = questions(randomIndex)
-    val Questiontxt = liste.get(0)
-    val Reponsebonne = liste.get(1)
-
-
-    val listereponse = (liste.drop(1)).shuffled()
-    print(listereponse)
-
-
-
-    PanneauQuestion(300,350, Questiontxt)
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = 40.dp),
-        verticalArrangement = Arrangement.Bottom,
-        horizontalAlignment = Alignment.End,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            BoutonQCM(listereponse.get(0), onClick, Reponsebonne)
-            BoutonQCM(listereponse.get(1), onClick, Reponsebonne)
+            override fun onCancelled(databaseError: DatabaseError) {
+                continuation.resumeWithException(databaseError.toException())
+            }
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            BoutonQCM(listereponse.get(2), onClick, Reponsebonne)
-            BoutonQCM(listereponse.get(3), onClick, Reponsebonne)
+        questionsRef.addListenerForSingleValueEvent(valueEventListener)
 
-
-            // Autres éléments que vous souhaitez inclure dans la rangée
+        // Annuler l'écouteur de valeurs lorsque la coroutine est annulée
+        continuation.invokeOnCancellation {
+            questionsRef.removeEventListener(valueEventListener)
         }
     }
-
 }
+
+
+
+@SuppressLint("CoroutineCreationDuringComposition")
+@OptIn(DelicateCoroutinesApi::class)
+@Composable
+fun QuestionChoixMultiple(onClick: () -> Unit) {
+    val randomIndex = remember { Random.nextInt(19) }
+    val qcmState = remember { mutableStateOf<QCM?>(null) }
+
+    LaunchedEffect(randomIndex) {
+        val question = questionFromDatabase("geographie_questions", randomIndex)
+        qcmState.value = question
+    }
+
+    val qcm = qcmState.value
+    if (qcm != null) {
+        println(qcm)
+        val liste = qcm.answers
+        val Questiontxt = qcm.question
+        println(liste)
+
+
+        PanneauQuestion(300, 350, Questiontxt)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 40.dp),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.End,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                BoutonQCM(liste[0].reponse, onClick, liste[0].bonne_réponse)
+                BoutonQCM(liste[1].reponse, onClick, liste[1].bonne_réponse)
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                BoutonQCM(liste[2].reponse, onClick, liste[2].bonne_réponse)
+                BoutonQCM(liste[3].reponse, onClick, liste[3].bonne_réponse)
+            }
+        }
+    }
+}
+
+
 
 /*
 @Composable
@@ -421,7 +471,7 @@ fun QuestionText(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ){
-            BoutonQCM("Envoyer", onClick, "Envoyer")
+            BoutonQCM("Envoyer", onClick, true)
         }
     }
 }
