@@ -51,10 +51,9 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.QCM
-import fr.imt.atlantique.codesvi.app.data.model.Reponse
+import fr.imt.atlantique.codesvi.app.data.model.Answer
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
-import timber.log.Timber
 import java.text.Normalizer
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -306,13 +305,13 @@ suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {
                         val explanation = questionSnapshot.child("explanation").getValue(String::class.java)
 
                         // Récupération de la liste des réponses
-                        val answersList = ArrayList<Reponse>()
+                        val answersList = ArrayList<Answer>()
                         val answersSnapshot = questionSnapshot.child("answers")
                         for (answerSnapshot in answersSnapshot.children) {
                             val answer = answerSnapshot.child("answer").getValue(String::class.java)
                             val isRight = answerSnapshot.child("isRight").getValue(Boolean::class.java)
                             if (answer != null && isRight != null) {
-                                val reponse= Reponse(isRight,answer)
+                                val reponse= Answer(isRight,answer)
                                 answersList.add(reponse)
 
                             }

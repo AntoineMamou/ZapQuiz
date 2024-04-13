@@ -1,5 +1,7 @@
 package fr.imt.atlantique.codesvi.app.ui
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -12,6 +14,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import fr.imt.atlantique.codesvi.app.ui.components.navigation.BottomNavBar
 import fr.imt.atlantique.codesvi.app.ui.navigation.AppNavHost
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
@@ -19,8 +22,26 @@ import fr.imt.atlantique.codesvi.app.ui.navigation.rememberAppState
 import fr.imt.atlantique.codesvi.app.ui.screens.settings.Theme
 import fr.imt.atlantique.codesvi.app.ui.theme.AppTheme
 
+
+
 @Composable
 fun MainUI() {
+
+    val context = LocalContext.current
+    // Initialisez SharedPreferences dans votre application
+    val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+    }
+
+// Vérifiez si c'est la première connexion de l'utilisateur
+    val isFirstLogin = sharedPreferences.getBoolean("first_login", true)
+
+    var startDestination =RootScreen.Home.route
+    if (isFirstLogin) {
+        startDestination=RootScreen.Login.route
+    }
+
+
 
     val appState = rememberAppState()
 
@@ -58,7 +79,7 @@ fun MainUI() {
                 AppNavHost(
                     appState = appState,
                     padding = padding,
-                    startDestination = RootScreen.Login.route
+                    startDestination = startDestination
                 )
             }
         }

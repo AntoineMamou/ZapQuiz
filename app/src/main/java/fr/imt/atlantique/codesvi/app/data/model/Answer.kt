@@ -1,6 +1,6 @@
 package fr.imt.atlantique.codesvi.app.data.model
 
-data class Reponse(
+data class Answer(
     val isRight : Boolean,
     val answer: String
 ) {

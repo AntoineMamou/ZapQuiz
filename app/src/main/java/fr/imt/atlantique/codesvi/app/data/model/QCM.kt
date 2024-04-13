@@ -1,7 +1,7 @@
 package fr.imt.atlantique.codesvi.app.data.model
 
 data class QCM(
-    val answers : List<Reponse>,
+    val answers : List<Answer>,
     val id: String,
     val type: String,
     val category : String,
