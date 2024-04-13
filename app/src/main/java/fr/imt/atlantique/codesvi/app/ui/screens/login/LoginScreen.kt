@@ -1,5 +1,7 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.login
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -27,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,8 +47,6 @@ import androidx.compose.material3.SearchBar as SearchBar1
 import timber.log.Timber
 import java.security.MessageDigest
 import java.util.regex.Pattern
-
-
 
 
 
@@ -116,6 +117,7 @@ fun connecterUtilisateur(
     pseudo: String,
     motDePasse: String,
     onNavigateToHome: () -> Unit,
+    sharedPreferences: SharedPreferences
 ): Boolean {
     val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
     val usersRef = database.getReference("utilisateurs")
@@ -130,6 +132,10 @@ fun connecterUtilisateur(
 
                 if (userPseudo == pseudo && userMotDePasse == hacherMotDePasse(motDePasse)) {
                     Timber.e("Connexion réussie pour l'utilisateur : $pseudo")
+                    val editor = sharedPreferences.edit()
+                    editor.putBoolean("connexion", true)
+                    editor.putBoolean("first_login", false) // Mettre à jour le premier login
+                    editor.apply()
                     onNavigateToHome()
                 }
                 else{
@@ -158,6 +164,12 @@ fun LoginScreen(
     state : LoginState,
     onNavigateToHome: () -> Unit
 ) {
+
+
+    val context = LocalContext.current
+    val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+    }
 
 
     var pseudo by remember { mutableStateOf("") }
@@ -225,7 +237,7 @@ fun LoginScreen(
 
                     Row {
                         Button(onClick = {
-                            val x= connecterUtilisateur(pseudo, motDePasse, onNavigateToHome)
+                            connecterUtilisateur(pseudo, motDePasse, onNavigateToHome,sharedPreferences)
 
                         }) {
                             Text(text = "Se Connecter ")
