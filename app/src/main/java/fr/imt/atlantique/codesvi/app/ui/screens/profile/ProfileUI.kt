@@ -39,6 +39,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,85 +52,17 @@ import timber.log.Timber
 val fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
 
 
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun Main(){
-
-    Column(
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(top=60.dp)
-    ) {
-        Text(
-            text = "Amis",
-            color = Color.White,
-            fontSize = 40.sp,
-            fontFamily = fontPrincipale
-        )
-        Spacer(Modifier.height(20.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-
-        ){
-            Image(
-                painter = painterResource(id = R.drawable.ajouter_ami),
-                contentDescription = null, // Description de l'image si nécessaire
-                modifier = Modifier.width(60.dp)
-            )
-
-            Spacer(Modifier.width(12.dp))
-
-            var searchText by remember { mutableStateOf(TextFieldValue()) }
-
-            Box(
-                modifier=Modifier.background(
-                    color = MaterialTheme.colorScheme.secondary,
-                    RoundedCornerShape(15.dp)
-                )
-            ) {
-                TextField(
-                    value = searchText,
-                    onValueChange = { searchText = it },
-                    placeholder = { Text(text = "Rechercher ...") },
-                    modifier = Modifier
-                        .width(215.dp)
-                        .border(
-                            5.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            RoundedCornerShape(15.dp)
-                        ),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                        focusedBorderColor = Color.Transparent,
-                        focusedLabelColor = MaterialTheme.colorScheme.primary,
-                        cursorColor = Color.Transparent, // Couleur transparente pour le curseur
-                        unfocusedBorderColor =  Color.Transparent, // Couleur transparente pour l'indicateur de focus
-                        focusedTextColor = Color.White,
-                        focusedPlaceholderColor = Color.White,
-                        unfocusedPlaceholderColor = Color.White
-                    ),
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        imeAction = ImeAction.Done // Définir l'action IME sur "Done"
-                    ),
-                    keyboardActions = KeyboardActions(onDone = {
-                        // Exécuter votre fonction ici
-                        searchText= TextFieldValue("")
-                    }),
-                )
-            }
-        }
-    }
+fun filterFriends(friends: List<String>, searchText: String): List<String> {
+    // Filter friends whose names start with the search text (case-insensitive)
+    return friends.filter { it.startsWith(searchText, ignoreCase = true) }
 }
-
 
 @Composable
 fun AfficheListe(amis: List<String>) {
     val scrollState = rememberLazyListState()
 
     LazyColumn(
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
         state = scrollState,
         modifier = Modifier
@@ -138,16 +71,23 @@ fun AfficheListe(amis: List<String>) {
             .padding(top = 190.dp)
     ) {
         items(amis.size) { index ->
-            if (index >= 3) { // Limite le nombre d'éléments affichés à partir de l'index 3
+            if (index >= 0) { // Limite le nombre d'éléments affichés à partir de l'index 3
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start,
                     modifier = Modifier
-                        .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(15.dp))
+                        .background(
+                            color = MaterialTheme.colorScheme.secondary,
+                            RoundedCornerShape(15.dp)
+                        )
                         .width(300.dp)
                         .height(70.dp)
-                        .border(5.dp, color=MaterialTheme.colorScheme.primary, RoundedCornerShape(15.dp))
+                        .border(
+                            5.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(15.dp)
+                        )
 
 
                 ){
@@ -197,12 +137,77 @@ fun AfficheListe(amis: List<String>) {
                 }
                 Spacer(modifier = Modifier.height(8.dp))
 
+
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun Main(friends: List<String>, onSearchResult: (List<String>) -> Unit){
 
+    Column(
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(top=60.dp)
+    ) {
+        Text(
+            text = "Amis",
+            color = Color.White,
+            fontSize = 40.sp,
+            fontFamily = fontPrincipale
+        )
+        Spacer(Modifier.height(20.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+
+        ){
+            Image(
+                painter = painterResource(id = R.drawable.ajouter_ami),
+                contentDescription = null, // Description de l'image si nécessaire
+                modifier = Modifier.width(60.dp)
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            var searchText by remember { mutableStateOf("") }
+            var filteredNouns by remember { mutableStateOf(emptyList<String>()) }
+
+            Box(
+                modifier=Modifier.background(
+                    color = MaterialTheme.colorScheme.secondary,
+                    RoundedCornerShape(15.dp)
+                )
+            ) {
+                TextField(
+
+                    value = searchText,
+                    onValueChange = { newText ->
+                        searchText = newText
+                        filteredNouns = filterFriends(friends, searchText)
+                        // Notify the parent composable of the filtered list
+                        onSearchResult(filteredNouns)
+                    },
+                    placeholder = { Text(text = "Rechercher ...") },
+                    modifier = Modifier
+                        .width(215.dp),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Done,
+                        keyboardType = KeyboardType.Text // Specify keyboard type as text
+                    ),
+                    keyboardActions = KeyboardActions(onDone = {
+                        // Trigger search on "Done" action
+                        filteredNouns = filterFriends(friends, searchText)
+                        onSearchResult(filteredNouns)
+                    })
+                )
+            }
+        }
+    }
+}
 
 
 
@@ -241,7 +246,7 @@ fun ProfileScreen(
     fr.imt.atlantique.codesvi.app.ui.screens.game.BackgroundImage()
     fr.imt.atlantique.codesvi.app.ui.screens.game.Header({ settingsModalVisible = true },
         { profilVisible = true })
-    Main()
+
 
 
     val listeAmis = remember {
@@ -259,5 +264,11 @@ fun ProfileScreen(
         )
     }
 
-    AfficheListe(amis = listeAmis)
+    var filteredNouns by remember { mutableStateOf(listeAmis) }
+
+    Main(friends = listeAmis, { filteredNounsList ->
+        filteredNouns = filteredNounsList
+    })
+
+    AfficheListe(amis = filteredNouns)
 }
