@@ -126,14 +126,19 @@ suspend fun getUserInfoDatabase(
                         val playerIcon = userSnapshot.child("playerIcon").getValue(Int::class.java) ?: 0
                         val title = userSnapshot.child("title").getValue(String::class.java) ?: ""
                         val connectionState = userSnapshot.child("connectionState").getValue(Boolean::class.java) ?: false
-                        val friends = userSnapshot.child("friends").getValue(List::class.java) as? List<User> ?: emptyList()
                         val victory = userSnapshot.child("victory").getValue(Int::class.java) ?: 0
                         val gamePlayed = userSnapshot.child("game_played").getValue(Int::class.java) ?: 0
                         val peakTrophy = userSnapshot.child("peak_trophy").getValue(Int::class.java) ?: 0
                         val favoriteCategory = userSnapshot.child("favorite_category").getValue(String::class.java) ?: ""
                         val money = userSnapshot.child("money").getValue(Int::class.java) ?: 0
 
-                        val user = User(id, password, trophies, playerIcon, title, connectionState, friends, victory, gamePlayed, peakTrophy, favoriteCategory, money)
+                        val friendsList = ArrayList<String>()
+                        val friendsSnapshot = userSnapshot.child("friends")
+                        for (friendSnapshot in friendsSnapshot.children) {
+                            friendsList.add(friendSnapshot.value.toString())
+                        }
+
+                        val user = User(id, password, trophies, playerIcon, title, connectionState, friendsList, victory, gamePlayed, peakTrophy, favoriteCategory, money)
                         continuation.resume(user)
                         return
                     }
