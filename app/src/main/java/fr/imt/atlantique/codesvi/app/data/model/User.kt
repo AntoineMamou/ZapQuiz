@@ -1,10 +1,12 @@
 package fr.imt.atlantique.codesvi.app.data.model
 
+import fr.imt.atlantique.codesvi.app.R
+
 data class User(
     val username : String,
     val password : String,
     val trophies : Int,
-    val playerIcon : String,
+    val playerIcon : Int,
     val title : String,
     val connectionState : Boolean,
     val friends : List<User>,
@@ -18,7 +20,7 @@ data class User(
         "",
         "",
         50,
-        "lightning",
+        R.drawable.lightning,
         "Zappeur débutant",
         false,
         listOf(),

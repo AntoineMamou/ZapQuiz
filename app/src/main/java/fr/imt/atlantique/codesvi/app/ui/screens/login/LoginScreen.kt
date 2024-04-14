@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.DataSnapshot
@@ -42,6 +43,8 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.User
+import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
 import kotlinx.coroutines.launch
 import androidx.compose.material3.SearchBar as SearchBar1
 import timber.log.Timber
@@ -64,7 +67,7 @@ fun ajouterUtilisateur(pseudo: String, motDePasse: String) {
     val userId = usersRef.push().key // Générer une clé unique pour l'utilisateur
     if (userId != null) {
         val motDePasseHache = hacherMotDePasse(motDePasse)
-        usersRef.child(userId).setValue(mapOf("pseudo" to pseudo, "motDePasse" to motDePasseHache))
+        usersRef.child(userId).setValue(mapOf("username" to pseudo, "password" to motDePasseHache, "trophies" to 100, "playerIcon" to 2131099725, "title" to "Zappeur débutant", "connectionState" to false, "friends" to listOf<User>(),"victory" to 0, "game_played" to 0, "peak_trophy" to 100, "favorite_category" to "", "money" to 100 ))
     }
 }
 
@@ -117,7 +120,8 @@ fun connecterUtilisateur(
     pseudo: String,
     motDePasse: String,
     onNavigateToHome: () -> Unit,
-    sharedPreferences: SharedPreferences
+    sharedPreferences: SharedPreferences,
+    navController: NavHostController
 ): Boolean {
     val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
     val usersRef = database.getReference("utilisateurs")
@@ -127,16 +131,17 @@ fun connecterUtilisateur(
     usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
         override fun onDataChange(snapshot: DataSnapshot) {
             for (userSnapshot in snapshot.children) {
-                val userPseudo = userSnapshot.child("pseudo").getValue(String::class.java)
-                val userMotDePasse = userSnapshot.child("motDePasse").getValue(String::class.java)
+                val userPseudo = userSnapshot.child("username").getValue(String::class.java)
+                val userMotDePasse = userSnapshot.child("password").getValue(String::class.java)
 
                 if (userPseudo == pseudo && userMotDePasse == hacherMotDePasse(motDePasse)) {
                     Timber.e("Connexion réussie pour l'utilisateur : $pseudo")
                     val editor = sharedPreferences.edit()
                     editor.putBoolean("connexion", true)
+                    editor.putString("username",pseudo)
                     editor.putBoolean("first_login", false) // Mettre à jour le premier login
                     editor.apply()
-                    onNavigateToHome()
+                    navController.navigate(RootScreen.Home.route)
                 }
                 else{
                     x=true
@@ -162,7 +167,9 @@ fun connecterUtilisateur(
 fun LoginScreen(
     modifier: Modifier = Modifier,
     state : LoginState,
-    onNavigateToHome: () -> Unit
+    onNavigateToHome: () -> Unit,
+    navController : NavHostController
+
 ) {
 
 
@@ -237,7 +244,7 @@ fun LoginScreen(
 
                     Row {
                         Button(onClick = {
-                            connecterUtilisateur(pseudo, motDePasse, onNavigateToHome,sharedPreferences)
+                            connecterUtilisateur(pseudo, motDePasse, onNavigateToHome,sharedPreferences, navController)
 
                         }) {
                             Text(text = "Se Connecter ")
