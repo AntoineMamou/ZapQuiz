@@ -1,5 +1,7 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.shop
 
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
@@ -37,6 +40,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.navigation.NavHostController
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.ui.screens.game.BackgroundImage
 import fr.imt.atlantique.codesvi.app.ui.screens.game.GridProfilComponent
@@ -45,6 +49,7 @@ import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.Logo
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
+import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.ProfileState
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
 import java.security.AllPermission
@@ -253,15 +258,22 @@ fun InfoBuyWindow(onClose: () -> Unit){
 @Composable
 fun ShopScreen(
     state : ShopState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController : NavHostController
 ) {
+    val context = LocalContext.current
+    val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+    }
+
+
     //Permet de gérer l'affichage ou non de la fenêtre des paramètres
     var settingsModalVisible by remember { mutableStateOf(false) }
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (settingsModalVisible) {
 
-        SettingsWindow(onClose = { settingsModalVisible = false })
+        SettingsWindow(onClose = { settingsModalVisible = false }, sharedPreferences, navController)
     }
 
 
@@ -270,7 +282,7 @@ fun ShopScreen(
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (profilVisible) {
-        ProfilWindow(onClose = { profilVisible = false })
+        user?.let { ProfilWindow(onClose = { profilVisible = false }, it) }
     }
 
 
@@ -283,8 +295,11 @@ fun ShopScreen(
     }
 
     fr.imt.atlantique.codesvi.app.ui.screens.game.BackgroundImage()
-    fr.imt.atlantique.codesvi.app.ui.screens.game.Header({ settingsModalVisible = true },
-        { profilVisible = true })
+    user?.let {
+        fr.imt.atlantique.codesvi.app.ui.screens.game.Header({ settingsModalVisible = true },
+        { profilVisible = true }, it
+        )
+    }
 
     Main({ infoBuyVisible = true })
 

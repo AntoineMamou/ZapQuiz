@@ -1,5 +1,8 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.game
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,29 +56,105 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+import fr.imt.atlantique.codesvi.app.data.model.Answer
+import fr.imt.atlantique.codesvi.app.data.model.QCM
+import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.AppState
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
+import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
 import fr.imt.atlantique.codesvi.app.ui.navigation.rememberAppState
+import fr.imt.atlantique.codesvi.app.ui.screens.login.hacherMotDePasse
+import fr.imt.atlantique.codesvi.app.ui.screens.question.databaseGlobal
 import fr.imt.atlantique.codesvi.app.ui.screens.shop.ShopState
 import fr.imt.atlantique.codesvi.app.ui.screens.solo.rememberSoloState
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
 import java.time.format.TextStyle
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
+import kotlin.random.Random
 
 
 val  fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
 val fontChiffre  = FontFamily(Font(R.font.bubble_bobble))
+
+var user : User? = null
+
+fun getUser(user_eff : User){
+    user = user_eff
+}
+suspend fun getUserInfoDatabase(
+    username: String
+): User? {
+    return suspendCoroutine { continuation ->
+        val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+        val usersRef = database.getReference("utilisateurs")
+
+        val valueEventListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+
+                for (userSnapshot in snapshot.children) {
+                    val userSearched = userSnapshot.child("username").getValue(String::class.java)
+
+                    if (userSearched == username) {
+
+                        val id = userSnapshot.child("username").getValue(String::class.java) ?: ""
+                        val password = userSnapshot.child("password").getValue(String::class.java) ?: ""
+                        val trophies = userSnapshot.child("trophies").getValue(Int::class.java) ?: 0
+                        val playerIcon = userSnapshot.child("playerIcon").getValue(Int::class.java) ?: 0
+                        val title = userSnapshot.child("title").getValue(String::class.java) ?: ""
+                        val connectionState = userSnapshot.child("connectionState").getValue(Boolean::class.java) ?: false
+                        val friends = userSnapshot.child("friends").getValue(List::class.java) as? List<User> ?: emptyList()
+                        val victory = userSnapshot.child("victory").getValue(Int::class.java) ?: 0
+                        val gamePlayed = userSnapshot.child("game_played").getValue(Int::class.java) ?: 0
+                        val peakTrophy = userSnapshot.child("peak_trophy").getValue(Int::class.java) ?: 0
+                        val favoriteCategory = userSnapshot.child("favorite_category").getValue(String::class.java) ?: ""
+                        val money = userSnapshot.child("money").getValue(Int::class.java) ?: 0
+
+                        val user = User(id, password, trophies, playerIcon, title, connectionState, friends, victory, gamePlayed, peakTrophy, favoriteCategory, money)
+                        continuation.resume(user)
+                        return
+                    }
+                }
+                println("Username not found")
+                continuation.resume(null)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                println("Database error: ${error.message}")
+                continuation.resumeWithException(error.toException())
+            }
+        }
+
+        usersRef.addListenerForSingleValueEvent(valueEventListener)
+    }
+}
+
+
+
+
 
 @Composable
 fun BackgroundImage() {
@@ -91,7 +170,7 @@ fun BackgroundImage() {
 }
 
 @Composable
-fun Header(settingsonClick: () -> Unit , profilOnClick: ()->Unit) {
+fun Header(settingsonClick: () -> Unit , profilOnClick: ()->Unit, user : User) {
 
 
     Row(
@@ -114,7 +193,7 @@ fun Header(settingsonClick: () -> Unit , profilOnClick: ()->Unit) {
                 modifier = Modifier.size(70.dp),
                 content = {
                     Image(
-                        painter = painterResource(id = R.drawable.magasin_png),
+                        painter = painterResource(id = user.playerIcon),
                         contentDescription = null, // Description de l'image si nécessaire
                         modifier = Modifier.fillMaxSize()
                     )
@@ -122,7 +201,7 @@ fun Header(settingsonClick: () -> Unit , profilOnClick: ()->Unit) {
             )
 
             Text(
-                text = "Username",
+                text = user.username,
                 color = Color.White,
                 fontSize = 20.sp,
                 fontFamily = fontPrincipale
@@ -146,7 +225,7 @@ fun Header(settingsonClick: () -> Unit , profilOnClick: ()->Unit) {
             ) {
                 // Texte à droite
                 Text(
-                    text = "100",
+                    text = user.money.toString(),
                     color = Color.White,
                     fontSize = 30.sp,
                     fontFamily = fontChiffre
@@ -402,7 +481,7 @@ fun Centre(navController: NavHostController) {
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight()
-            .padding(top=200.dp)
+            .padding(top = 200.dp)
             .onGloballyPositioned { coordinates ->
                 parentHeight.value = coordinates.size.height
             }
@@ -472,7 +551,7 @@ fun HorizontalBar(){
 }
 
 @Composable
-fun SettingsWindow(onClose: () -> Unit) {
+fun SettingsWindow(onClose: () -> Unit, sharedPreferences: SharedPreferences, navController: NavHostController) {
     // La taille de la fenêtre modale des paramètres
     val windowWidth = 250.dp
     val windowHeight = 350.dp
@@ -562,7 +641,15 @@ fun SettingsWindow(onClose: () -> Unit) {
                     Image(
                         painter = painterResource(id = R.drawable.deconnexion),
                         contentDescription = "deconnexion", // Indiquez une description si nécessaire
-                        modifier = Modifier.size(40.dp) // Ajuster la taille de l'image selon vos besoins
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clickable(onClick = {
+                                val editor = sharedPreferences.edit();
+                                editor.putBoolean("first_login", true);
+                                editor.apply();
+                                navController.navigate(RootScreen.Login.route)
+
+                            })
                     )
                 }
 
@@ -611,7 +698,7 @@ fun ProfilComponent(textTitre : String, textResultat : String){
 }
 
 @Composable
-fun GridProfilComponent(){
+fun GridProfilComponent(user : User){
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceAround,
@@ -621,9 +708,9 @@ fun GridProfilComponent(){
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ProfilComponent(textTitre = "Victoires", textResultat = "150" )
+            ProfilComponent(textTitre = "Victoires", textResultat = user.victory.toString() )
             Spacer(modifier = Modifier.height(16.dp))
-            ProfilComponent(textTitre = "Meilleurs Trophées", textResultat ="1600")
+            ProfilComponent(textTitre = "Meilleurs Trophées", textResultat =user.peak_trophy.toString())
         }
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -632,9 +719,9 @@ fun GridProfilComponent(){
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ProfilComponent(textTitre = "Parties Jouées", textResultat = "200" )
+            ProfilComponent(textTitre = "Parties Jouées", textResultat = user.game_played.toString() )
             Spacer(modifier = Modifier.height(16.dp))
-            ProfilComponent(textTitre = "Catégorie Préférée", textResultat ="Histoire")
+            ProfilComponent(textTitre = "Catégorie Préférée", textResultat =user.favorite_category)
         }
 
 
@@ -643,7 +730,7 @@ fun GridProfilComponent(){
 
 
 @Composable
-fun ProfilWindow(onClose: () -> Unit){
+fun ProfilWindow(onClose: () -> Unit, user : User){
     // La taille de la fenêtre modale des paramètres
     val windowWidth = 350.dp
     val windowHeight = 430.dp
@@ -710,7 +797,7 @@ fun ProfilWindow(onClose: () -> Unit){
                         modifier = Modifier.size(70.dp),
                         content = {
                             Image(
-                                painter = painterResource(id = R.drawable.magasin_png),
+                                painter = painterResource(id = user.playerIcon),
                                 contentDescription = null, // Description de l'image si nécessaire
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -727,7 +814,7 @@ fun ProfilWindow(onClose: () -> Unit){
 
 
                         Text(
-                            text = "Username",
+                            text = user.username,
                             color = Color.White,
                             fontSize = 20.sp,
                             fontFamily = fontPrincipale
@@ -736,7 +823,7 @@ fun ProfilWindow(onClose: () -> Unit){
                         Spacer(modifier = Modifier.width(16.dp))
 
                         Text(
-                            text = "ID : #2J3S0",
+                            text = user.title,
                             color = Color.LightGray,
                             fontSize = 16.sp,
                             fontFamily = fontPrincipale
@@ -747,7 +834,7 @@ fun ProfilWindow(onClose: () -> Unit){
                     Spacer(modifier=Modifier.width(24.dp))
 
                     Text(
-                        text = "1560",
+                        text = user.trophies.toString(),
                         color = Color.White,
                         fontSize = 25.sp,
                         fontFamily = fontPrincipale
@@ -766,7 +853,7 @@ fun ProfilWindow(onClose: () -> Unit){
 
                 HorizontalBar()
 
-                GridProfilComponent()
+                GridProfilComponent(user)
 
                 HorizontalBar()
 
@@ -784,12 +871,32 @@ fun ProfilWindow(onClose: () -> Unit){
 
 
 
+@OptIn(DelicateCoroutinesApi::class)
+@SuppressLint("CoroutineCreationDuringComposition")
 @Composable
 fun GameScreen(
     state : GameState,
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+    val context = LocalContext.current
+    val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+    }
+
+    val username = sharedPreferences.getString("username", "")
+
+    val userState = remember {
+        mutableStateOf<User?>(null)
+    }
+    LaunchedEffect(userState){
+        val user = username?.let { getUserInfoDatabase(it) }
+        userState.value=user
+    }
+
+    userState.value?.let { getUser(it) }
+
+
 
 
 
@@ -799,7 +906,7 @@ fun GameScreen(
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (settingsModalVisible) {
 
-        SettingsWindow(onClose = { settingsModalVisible = false })
+        SettingsWindow(onClose = { settingsModalVisible = false }, sharedPreferences, navController)
     }
 
 
@@ -808,12 +915,12 @@ fun GameScreen(
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (profilVisible) {
-        ProfilWindow(onClose = { profilVisible = false })
+        userState.value?.let { ProfilWindow(onClose = { profilVisible = false }, it) }
     }
 
 
     BackgroundImage()
-    Header ({ settingsModalVisible = true} , {profilVisible=true })
+    userState.value?.let { Header ({ settingsModalVisible = true} , {profilVisible=true }, it) }
     Logo()
     //MainGame()
     //ModeDeJeu()
@@ -825,6 +932,7 @@ fun GameScreen(
 
 
 
-}
 
+
+}
 

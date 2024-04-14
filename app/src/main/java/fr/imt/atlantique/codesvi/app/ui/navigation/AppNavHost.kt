@@ -68,7 +68,8 @@ fun AppNavHost(
         ) {
             LoginScreen(
                 state = loginState,
-                onNavigateToHome = { loginState.navigateTo(HomeRootScreen.Game) }
+                onNavigateToHome = { loginState.navigateTo(HomeRootScreen.Game) },
+                navController = navController
             )
         }
 
@@ -106,7 +107,8 @@ fun AppNavHost(
 
                 ProfileScreen(
                     modifier = Modifier.fillMaxSize(),
-                    state = profileState
+                    state = profileState,
+                    navController = navController
                 )
             }
 
@@ -120,7 +122,8 @@ fun AppNavHost(
 
                 ShopScreen(
                     modifier = Modifier.fillMaxSize(),
-                    state = shopState //changer en shopState
+                    state = shopState,
+                    navController = navController
                 )
             }
 
