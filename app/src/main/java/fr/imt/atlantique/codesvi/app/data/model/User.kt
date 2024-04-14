@@ -9,7 +9,7 @@ data class User(
     val playerIcon : Int,
     val title : String,
     val connectionState : Boolean,
-    val friends : List<User>,
+    val friends : List<String>,
     val victory : Int,
     val game_played : Int,
     val peak_trophy : Int,
