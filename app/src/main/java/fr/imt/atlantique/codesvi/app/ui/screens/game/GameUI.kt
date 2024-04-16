@@ -565,7 +565,7 @@ fun SettingsWindow(onClose: () -> Unit, sharedPreferences: SharedPreferences, na
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0f))
+            .background(Color.Black.copy(alpha = 0.5f))
             .zIndex(1f)
             .clickable(onClick = onClose)
 
@@ -735,7 +735,11 @@ fun GridProfilComponent(user : User){
 
 
 @Composable
-fun ProfilWindow(onClose: () -> Unit, user : User){
+fun ProfilWindow(
+    onClose: () -> Unit,
+    user : User,
+    isNotFriend: Boolean
+    ){
     // La taille de la fenêtre modale des paramètres
     val windowWidth = 350.dp
     val windowHeight = 430.dp
@@ -744,7 +748,7 @@ fun ProfilWindow(onClose: () -> Unit, user : User){
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0f))
+            .background(Color.Black.copy(alpha = 0.5f))
             .zIndex(1f)
             .clickable(onClick = onClose)
 
@@ -861,9 +865,23 @@ fun ProfilWindow(onClose: () -> Unit, user : User){
                 GridProfilComponent(user)
 
                 HorizontalBar()
+                if(isNotFriend){
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()) {
+                        Button(onClick = { /*TODO*/ }) {
+                            Text(text = "Classement")
+                        }
 
-                Button(onClick = { /*TODO*/ }) {
-                    Text(text = "Voir le classement")
+                        Button(onClick = { /*TODO*/ }) {
+                            Text(text = "Demander en ami")
+                        }
+                    }
+                }
+                else{
+                    Button(onClick = { /*TODO*/ }) {
+                        Text(text = "Voir le classement")
+                    }
                 }
 
             }
@@ -920,7 +938,7 @@ fun GameScreen(
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (profilVisible) {
-        userState.value?.let { ProfilWindow(onClose = { profilVisible = false }, it) }
+        userState.value?.let { ProfilWindow(onClose = { profilVisible = false }, it, false) }
     }
 
 
