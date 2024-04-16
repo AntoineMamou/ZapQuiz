@@ -152,7 +152,8 @@ fun AppNavHost(
 
                 MultiScreen(
                     modifier = Modifier.fillMaxSize(),
-                    state =multiState
+                    state =multiState,
+                    navController = navController
                 )
             }
 

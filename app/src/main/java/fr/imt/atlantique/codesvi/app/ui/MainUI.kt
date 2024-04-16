@@ -35,7 +35,6 @@ fun MainUI() {
 
 // Vérifiez si c'est la première connexion de l'utilisateur
     val isFirstLogin = sharedPreferences.getBoolean("first_login", true)
-
     var startDestination =RootScreen.Home.route
     if (isFirstLogin) {
         startDestination=RootScreen.Login.route
@@ -85,3 +84,4 @@ fun MainUI() {
         }
     }
 }
+

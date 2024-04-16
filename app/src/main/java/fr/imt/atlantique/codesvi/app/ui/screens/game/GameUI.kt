@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -321,7 +322,7 @@ fun ModeDeJeu() {
                         // Attendre les prochains changements de gestes
                         delay(200)
 
-                        // Bien que nous n'ayons pas besoin de balayages à droite et à gauche
+
                         when {
                             x > 0 -> {
                                 try {
@@ -370,7 +371,6 @@ fun ModeDeJeu() {
     // Faire défiler vers l'élément initial
     LaunchedEffect(Unit) {
         scrollState.scrollToItem(currentIndex)
-
     }
 }
 
@@ -480,6 +480,51 @@ fun StartButton(navController: NavHostController) {
 }
 
 @Composable
+fun StartButton2(navController: NavHostController){
+    Row(verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .width(300.dp)
+            .height(70.dp)
+            //.padding(bottom = 16.dp)
+            .background(
+                color = MaterialTheme.colorScheme.secondary,
+                RoundedCornerShape(15.dp)
+            )
+
+
+
+            .border(
+                5.dp,
+                color = MaterialTheme.colorScheme.primary,
+                RoundedCornerShape(15.dp)
+            )
+            .clickable(onClick = {if(currentIndex <= 0) {
+                currentIndex=0
+                navController.navigate(HomeRootScreen.Duel.route)
+            }
+
+                if(currentIndex == 1) {
+                    navController.navigate(HomeRootScreen.Solo.route)
+                }
+
+                if(currentIndex >= 2) {
+                    currentIndex=2
+                    navController.navigate(HomeRootScreen.Multi.route)
+                }})
+
+    ){
+        Text(text = "Start",
+            color = Color.White,
+            fontSize = 25.sp,
+            fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
+        )
+    }
+}
+
+
+
+@Composable
 fun Centre(navController: NavHostController) {
     val parentHeight = remember { mutableStateOf(0) }
     Box(
@@ -511,6 +556,35 @@ fun Centre(navController: NavHostController) {
         }
     }
 }
+
+
+@Composable
+fun Centre2(navController: NavHostController){
+    val parentHeight = remember { mutableStateOf(0) }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight()
+            .padding(top = 200.dp)
+            .onGloballyPositioned { coordinates ->
+                parentHeight.value = coordinates.size.height
+            }
+    ) {
+            Column(
+                verticalArrangement = Arrangement.SpaceEvenly, // Ajout de l'espacement vertical
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.height(parentHeight.value.dp)
+            ) {
+
+                ModeDeJeu()
+
+                StartButton2(navController = navController)
+
+            }
+    }
+}
+
+
 
 
 @Composable
@@ -902,9 +976,6 @@ fun GameScreen(
     userState.value?.let { getUser(it) }
 
 
-
-
-
     //Permet de gérer l'affichage ou non de la fenêtre des paramètres
     var settingsModalVisible by remember { mutableStateOf(false) }
 
@@ -930,7 +1001,7 @@ fun GameScreen(
     //MainGame()
     //ModeDeJeu()
     //StartButton(navController)
-    Centre(navController)
+    Centre2(navController)
 
 
 
