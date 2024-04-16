@@ -584,6 +584,16 @@ fun Global(){
 
     }
     if (gameMode == "Multi") {
+        // Button to change the currentContent state
+        // Display content based on currentContent state
+        when (currentContent) {
+            0 -> ChangerQuestion(onClick = { currentContent = 1 - currentContent })
+
+            1 -> ChangerQuestion(onClick = { currentContent = 1 - currentContent })
+            // Add more cases as needed
+        }
+        println(NombreDeVies)
+        ProgressBar(NombreDeVies, NombreQuestion)
 
 
     }
