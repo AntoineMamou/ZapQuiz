@@ -2,15 +2,15 @@ package fr.imt.atlantique.codesvi.app.ui.screens.profile
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.widget.NumberPicker.OnValueChangeListener
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -25,13 +25,15 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,15 +45,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -61,13 +67,12 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.User
+import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
-import fr.imt.atlantique.codesvi.app.ui.screens.game.fontChiffre
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -126,7 +131,7 @@ fun AfficheListe(amis: List<String>, usersList: List<User>, onClose: () -> Unit,
                                 color = MaterialTheme.colorScheme.primary,
                                 RoundedCornerShape(15.dp)
                             )
-                            .clickable(onClick = {onModifyUser(usersList[index])})
+                            .clickable(onClick = { onModifyUser(usersList[index]) })
 
 
 
@@ -190,7 +195,9 @@ fun Main(
     friends: List<String>,
     users: List<String>,
     onSearchResult: (List<String>) -> Unit,
-    onSearchResultUsers: (List<String>) -> Unit
+    onSearchResultUsers: (List<String>) -> Unit,
+    onFriendsRequestVisible: (Boolean) -> Unit,
+    isFriendsRequest: Boolean
 ) {
     var searchText by remember { mutableStateOf("") }
     var filteredNouns by remember { mutableStateOf(emptyList<String>()) }
@@ -216,9 +223,11 @@ fun Main(
             modifier = Modifier.fillMaxWidth()
         ) {
             Image(
-                painter = painterResource(id = R.drawable.ajouter_ami),
+                painter = painterResource(id = if (isFriendsRequest) R.drawable.add_friend_pop else R.drawable.add_friend),
                 contentDescription = null,
-                modifier = Modifier.width(60.dp)
+                modifier = Modifier
+                    .width(60.dp)
+                    .clickable(onClick = { onFriendsRequestVisible(true) })
             )
 
             Spacer(Modifier.width(12.dp))
@@ -277,7 +286,8 @@ fun Main(
                         filteredNouns = filterFriends(displayList, searchText)
                         onSearchResult(filteredNouns)
                         onSearchResultUsers(filteredNouns)
-                    }
+                    },
+                    modifier = Modifier.rotate(90F)
                 )
 
                 Spacer(Modifier.width(8.dp))
@@ -298,6 +308,161 @@ fun Main(
         }
     }
 }
+
+
+@Composable
+fun PopupWindow(
+    friends_request: List<String>,
+    onClose: () -> Unit,
+) {
+    val context = LocalContext.current
+
+    BackHandler(onBack = {
+        // Handle back button press to close the window
+        onClose()
+    })
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = {
+                        // Handle click outside of the window to close it
+                        onClose()
+                    }
+                )
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .height(400.dp)
+                .align(Alignment.Center)
+                .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(15.dp))
+                .border(
+                    width = 8.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(15.dp)
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = MaterialTheme.colorScheme.secondary,
+                        RoundedCornerShape(15.dp)
+                    )
+                    .padding(16.dp)
+            ) {
+                // Image in the top right corner
+                Image(
+                    painter = painterResource(id = R.drawable.croix_suppr), // replace with your image resource
+                    contentDescription = "Close",
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clickable {
+                            // Close the window when clicked
+                            onClose()
+                        }
+                        .align(Alignment.End)
+                )
+
+                Text(
+                    text = "Demandes d'ami",
+                    fontSize = 25.sp,
+                    fontFamily = fontPrincipale,
+                    color = Color.White,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                HorizontalDivider(
+                    modifier = Modifier
+                        .height(10.dp)
+                        .border(1.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)),
+                    thickness = 5.dp,
+                    color = MaterialTheme.colorScheme.primary
+
+                )
+
+                if(friends_request.isEmpty()){
+
+                    Spacer(Modifier.height(10.dp))
+
+                    Text(
+                        text = "Personne ne veut être votre Zami :(",
+                        fontFamily = fontPrincipale,
+                        fontSize = 18.sp,
+                        color = Color.White,
+                        fontStyle = FontStyle.Italic
+                    )
+                }
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    friends_request.forEach { username ->
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "$username veut être votre ami",
+                                    fontFamily = fontPrincipale,
+                                    fontSize = 18.sp,
+                                    color = Color.White,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(vertical = 4.dp)
+                                )
+                                IconButton(
+                                    onClick = {
+                                        // TODO
+                                    },
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.croix_suppr),
+                                        contentDescription = "Accept",
+                                        tint = Color.Green
+                                    )
+                                }
+                                IconButton(
+                                    onClick = {
+                                        // TODO
+                                    },
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.croix_suppr),
+                                        contentDescription = "Remove",
+                                        tint = Color.Red
+                                    )
+                                }
+                            }
+
+                            HorizontalDivider(
+                                modifier = Modifier
+                                    .height(5.dp)
+                                    .border(1.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)),
+                                thickness = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+
+
 
 suspend fun getAllUsernames(): List<String> {
     return suspendCoroutine { continuation ->
@@ -395,7 +560,7 @@ fun ProfileScreen(
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (profilVisible) {
-        user?.let { ProfilWindow(onClose = { profilVisible = false }, it) }
+        user?.let { ProfilWindow(onClose = { profilVisible = false }, it, false) }
     }
 
 
@@ -425,21 +590,32 @@ fun ProfileScreen(
     var usersList = remember { mutableStateListOf<User>() }
     usersList = changeUsersList(filteredNouns = filteredNouns)
     val allUsersList = changeUsersList(filteredNouns = usernames.value)
-    println(allUsersList.toList())
+    var friendsRequestVisible by remember { mutableStateOf(false) }
+
+    var friendsRequestList by remember { mutableStateOf(emptyList<String>()) }
 
 
-    Main(friends = listeAmis, users = usernames.value,
+    Main(
+        friends = listeAmis, users = usernames.value,
         { filteredNounsList -> filteredNouns = filteredNounsList },
-        { filteredNouns -> usersList = filterUsers(allUsersList, filteredNouns);println(usersList.toList()) }
+        { filteredNouns -> usersList = filterUsers(allUsersList, filteredNouns)},
+        {bool -> friendsRequestVisible = bool},
+        !friendsRequestList.isEmpty()
     )
+    println(friendsRequestVisible)
+
 
     var userProfilVisible by remember { mutableStateOf(false) }
     var user_display = remember { mutableStateOf<User?>(null) }
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (userProfilVisible) {
-        println(user_display.value)
-        user_display.value?.let { ProfilWindow(onClose = { userProfilVisible = false }, user = it) }
+        user_display.value?.let { user?.friends?.let { it1 -> ProfilWindow(onClose = { userProfilVisible = false }, user = it, !it1.contains(user_display.value!!.username))} }
     }
 
+
     AfficheListe(amis = filteredNouns, usersList = usersList, onClose = { userProfilVisible = false }, {user -> user_display.value = user; userProfilVisible = true})
+
+    if (friendsRequestVisible){
+        PopupWindow(friends_request = friendsRequestList, onClose = {friendsRequestVisible = false})
+    }
 }

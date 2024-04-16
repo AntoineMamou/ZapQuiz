@@ -67,7 +67,7 @@ fun ajouterUtilisateur(pseudo: String, motDePasse: String) {
     val userId = usersRef.push().key // Générer une clé unique pour l'utilisateur
     if (userId != null) {
         val motDePasseHache = hacherMotDePasse(motDePasse)
-        usersRef.child(userId).setValue(mapOf("username" to pseudo, "password" to motDePasseHache, "trophies" to 100, "playerIcon" to 2131099725, "title" to "Zappeur débutant", "connectionState" to false, "friends" to listOf<String>(),"victory" to 0, "game_played" to 0, "peak_trophy" to 100, "favorite_category" to "", "money" to 100 ))
+        usersRef.child(userId).setValue(mapOf("username" to pseudo, "password" to motDePasseHache, "trophies" to 100, "playerIcon" to R.drawable.lightning, "title" to "Zappeur débutant", "connectionState" to false, "friends" to listOf<String>(),"victory" to 0, "game_played" to 0, "peak_trophy" to 100, "favorite_category" to "", "money" to 100 ))
     }
 }
 
