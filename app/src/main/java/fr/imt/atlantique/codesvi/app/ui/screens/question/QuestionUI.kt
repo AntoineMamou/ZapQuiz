@@ -1,6 +1,7 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.question
 
 import android.annotation.SuppressLint
+import android.icu.text.ListFormatter.Width
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
@@ -20,31 +21,40 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 
 
-
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -52,9 +62,13 @@ import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.QCM
 import fr.imt.atlantique.codesvi.app.data.model.Answer
+import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.text.Normalizer
+import java.util.Timer
+import java.util.TimerTask
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.random.Random
@@ -105,6 +119,7 @@ var Reponse by mutableStateOf(true)
 
 @Composable
 fun PanneauQuestion(Hauteur : Int, Largeur : Int, Description : String){
+
     Column ( modifier = Modifier
         .padding(top = 140.dp)
         .fillMaxWidth(),
@@ -118,38 +133,109 @@ fun PanneauQuestion(Hauteur : Int, Largeur : Int, Description : String){
                 .width(Largeur.dp)
                 .height(Hauteur.dp)
                 .background(color = MaterialTheme.colorScheme.secondary)
-                .border(
-                    10.dp,
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(10.dp)
-                )
+                .clip(RectangleShape)
         ) {
+
+                Horizontalbar(false, false)
+
+                Horizontalbar(reverse = false, vertical = true )
+
+                Horizontalbar(reverse = true, vertical = true )
+
+
+
+
             Row(
                 modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
+
                 Text(
                     text = Description,
                     color = Color.White,
                     fontFamily = fontPrincipale,
+                    fontSize = 25.sp,
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .padding(start = 20.dp, end = 20.dp)
+
                     // Aligner le texte au centre de la Row
                 )
             }
-            Row( modifier = Modifier
-                .fillMaxSize()
-                .offset(x = -20.dp, y = -20.dp),
+
+
+            Horizontalbar(false, true)
+
+            Row(modifier = Modifier.fillMaxSize(),
                 verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.End,
-            ){
+                horizontalArrangement = Arrangement.Start) {
+                Horizontalbar(true, false)
 
             }
+
+
         }
 
 
     }
 }
 
+
+@Composable
+fun Horizontalbar(reverse : Boolean, vertical : Boolean ) {
+    var progress by remember { mutableStateOf(0f) }
+    var rotation by remember { mutableStateOf(0f) }
+    var pointx by remember { mutableStateOf(0f) }
+    var pointy by remember { mutableStateOf(0f) }
+    var taille by remember { mutableStateOf(0) }
+
+
+
+    if(!reverse && !vertical){
+        rotation = 0f
+        taille = 350
+    }else if (!reverse && vertical) {
+        rotation = 90f
+        pointx = 0.028f
+        pointy=  0f
+        taille = 350
+    } else if (reverse && !vertical){
+        rotation = 180f
+        taille = 350
+    } else if (reverse && vertical){
+        rotation = 270f
+        pointx = 0.972f
+        pointy = 0f
+        taille = 350
+
+    }
+
+
+    LaunchedEffect(Unit) {
+        while (progress < 1f) {
+            delay(10) // Attendre 1 seconde
+            progress += 0.0016f // Augmenter la valeur de remplissage de 0.1 à chaque intervalle
+        }
+    }
+
+    LinearProgressIndicator(
+        progress = { progress },
+        modifier = Modifier
+            .width(taille.dp)
+            .height(10.dp)
+            .graphicsLayer {
+                // Rotation de 180 degrés pour inverser la barre verticale
+                rotationZ = rotation
+                if (vertical) {
+                    transformOrigin = TransformOrigin(pointx, pointy)
+                }
+
+            },
+        trackColor = Color.Transparent
+    )
+
+}
 
 
 @Composable
@@ -199,17 +285,6 @@ fun GenererQuestion(onClick: () -> Unit){
     }
 }
 
-@Composable
-fun ReponseQuestion(textreponse : String){
-    PanneauQuestion(Hauteur = 400 , Largeur = 450, Description = textreponse )
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxWidth()
-    ){
-
-    }
-}
 
 
 
@@ -223,7 +298,7 @@ fun ChangerQuestion(onClick: () -> Unit) {
          }else if (!Reponse) {
             NombreDeVies = NombreDeVies - 1
             if (NombreDeVies == 0){
-                GameOver()
+
             }else {
                 GenererQuestion(onClick)
             }
@@ -362,7 +437,7 @@ fun QuestionChoixMultiple(onClick: () -> Unit) {
         val Questiontxt = qcm.question
 
 
-        PanneauQuestion(300, 350, Questiontxt)
+        PanneauQuestion(350, 350, Questiontxt)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -495,7 +570,8 @@ fun QuestionText(onClick: () -> Unit) {
 }
 
 @Composable
-fun ProgressBar(coeur : Int, serieQuestion : Int) {
+fun ProgressBar(coeur: Int, serieQuestion: Int) {
+
 
         Box(
             modifier = Modifier
@@ -516,9 +592,12 @@ fun ProgressBar(coeur : Int, serieQuestion : Int) {
                     text = " $serieQuestion questions réussis",
                     color = MaterialTheme.colorScheme.secondary,
                     fontFamily = fontPrincipale,
+                    fontSize = 20.sp
                     // Aligner le texte au centre de la Row
                 )
             }
+
+
 
             Row(
                 horizontalArrangement = Arrangement.End,
@@ -540,6 +619,7 @@ fun ProgressBar(coeur : Int, serieQuestion : Int) {
                 modifier = Modifier
                     .padding(bottom = 20.dp)
                     .align(Alignment.BottomCenter)
+
             ) {
                 repeat(coeur) {
                     Image(
@@ -552,24 +632,183 @@ fun ProgressBar(coeur : Int, serieQuestion : Int) {
             }
 
 
+
         }
 
 }
 
 @Composable
-fun GameOver(){
-    PanneauQuestion(Hauteur = 450, Largeur = 400, Description = "Vous avez perdu")
+fun GameOver(
+    navController : NavHostController
+) {
+    Column(
+        modifier = Modifier
+            .padding(top = 50.dp)
+            .fillMaxWidth(),
+
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+
+        ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(bottom = 20.dp, end = 10.dp)
+
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.coeur),
+                contentDescription = "fermer", // Indiquez une description si nécessaire
+                modifier = Modifier.size(250.dp) // Ajuster la taille de l'image selon vos besoins
+            )
+        }
+
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp)
+                .background(color = Color.Red)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Vous avez perdu",
+                    color = Color.White,
+                    fontFamily = fontPrincipale,
+                    fontSize = 25.sp,
+
+                    // Aligner le texte au centre de la Row
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Box(
+            modifier = Modifier
+                .width(300.dp)
+                .height(100.dp)
+                .background(color = MaterialTheme.colorScheme.secondary)
+                .border(width = 2.dp, color = MaterialTheme.colorScheme.primary) // Ajout de la bordure
+        ) {
+            Column {
+
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "$NombreQuestion questions réussis",
+                        color = Color.White,
+                        fontFamily = fontPrincipale,
+                        fontSize = 15.sp,
+
+                        // Aligner le texte au centre de la Row
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "0 golden questions réussis",
+                        color = Color.White,
+                        fontFamily = fontPrincipale,
+                        fontSize = 15.sp,
+
+                        // Aligner le texte au centre de la Row
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "0 coins gagnés",
+                        color = Color.White,
+                        fontFamily = fontPrincipale,
+                        fontSize = 15.sp,
+
+                        // Aligner le texte au centre de la Row
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically){
+
+            Box(
+                modifier = Modifier
+                    .size(180.dp, 150.dp)
+                    .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(20.dp))
+                    .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
+                    .clickable(onClick = {
+                        navController.navigate(RootScreen.Home.route);
+                        NombreQuestion = 0
+                        NombreDeVies = 4
+
+                    })
+
+
+            ) {
+                Text(
+                    text = "Retour au menu",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.Center),
+                    fontFamily = fontPrincipale
+                )
+            }
+
+
+        }
+
+
+
+
+    }
 }
 
 @Composable
-fun Global(){
+fun Global(
+    navController : NavHostController
+){
 
     var currentContent by remember { mutableStateOf(0) }
 
     if (gameMode == "Solo") {
+        var timer by remember { mutableStateOf(Timer()) }
+        var time_spend by remember { mutableStateOf(0) }
 
+        if (NombreDeVies > 0){
+        DisposableEffect(Unit) {
+            timer.scheduleAtFixedRate(object : TimerTask() {
+                override fun run() {
+                    // Changer la valeur de currentContent toutes les 10 secondes
+                    time_spend += 1
 
-            // Button to change the currentContent state
+                }
+            }, 0, 10) // Déclenche la tâche toutes les 10 secondes
+
+            onDispose {
+               println("fin") // Arrête le timer lorsque le composable est supprimé
+            }
+        }
+
+            LaunchedEffect(currentContent) {
+                // Réinitialiser time_spend à zéro à chaque changement de currentContent
+                time_spend = 0
+            }
             // Display content based on currentContent state
             when (currentContent) {
                 0 -> ChangerQuestion(onClick = { currentContent = 1 - currentContent })
@@ -577,8 +816,15 @@ fun Global(){
                 1 -> ChangerQuestion(onClick = { currentContent = 1 - currentContent })
                 // Add more cases as needed
             }
-            println(NombreDeVies)
-            ProgressBar(NombreDeVies, NombreQuestion)
+
+            if (time_spend == 1000 || time_spend == 1001){
+                Reponse = false
+                currentContent = 1 - currentContent
+
+            }
+        ProgressBar(NombreDeVies, NombreQuestion) } else { GameOver(navController)
+        currentContent = 2}
+
 
 
 
@@ -613,8 +859,9 @@ fun QuestionScreen(
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+
     Background()
-    Global()
+    Global(navController)
 
 
 }
