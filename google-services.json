@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1032295517782",
+    "project_id": "codevsi",
+    "storage_bucket": "codevsi.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1032295517782:android:a7bf3084bfb0fc634d75f7",
+        "android_client_info": {
+          "package_name": "fr.imt.atlantique.codesvi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxZcDjcHIY0eNzcDyG1JDjxCc-lS6tVes"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1032295517782:android:4a80a67441b645ce4d75f7",
+        "android_client_info": {
+          "package_name": "fr.imt.atlantique.codesvi.app.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxZcDjcHIY0eNzcDyG1JDjxCc-lS6tVes"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
