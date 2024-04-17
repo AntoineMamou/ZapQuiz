@@ -5,16 +5,17 @@ import fr.imt.atlantique.codesvi.app.R
 data class User(
     val username : String,
     val password : String,
-    val trophies : Int,
-    val playerIcon : Int,
-    val title : String,
-    val connectionState : Boolean,
-    val friends : List<String>,
-    val victory : Int,
-    val game_played : Int,
-    val peak_trophy : Int,
-    val favorite_category : String,
-    val money : Int
+    var trophies : Int,
+    var playerIcon : Int,
+    var title : String,
+    var connectionState : Boolean,
+    var friends : List<String>,
+    var victory : Int,
+    var game_played : Int,
+    var peak_trophy : Int,
+    var favorite_category : String,
+    var money : Int,
+    var friendsRequest : List<String>
 ){
     constructor() : this(
         "",
@@ -29,5 +30,6 @@ data class User(
         50,
         "None",
         100,
+        listOf()
     )
 }

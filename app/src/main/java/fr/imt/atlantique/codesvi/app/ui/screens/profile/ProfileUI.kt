@@ -70,7 +70,11 @@ import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
+import fr.imt.atlantique.codesvi.app.ui.screens.game.addFriendRequest
+import fr.imt.atlantique.codesvi.app.ui.screens.game.addFriendfromId
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
+import fr.imt.atlantique.codesvi.app.ui.screens.game.removeFriendRequest
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
@@ -118,7 +122,7 @@ fun AfficheListe(amis: List<String>, usersList: List<User>, onClose: () -> Unit,
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start,
+                        horizontalArrangement = Arrangement.SpaceAround,
                         modifier = Modifier
                             .background(
                                 color = MaterialTheme.colorScheme.secondary,
@@ -137,16 +141,6 @@ fun AfficheListe(amis: List<String>, usersList: List<User>, onClose: () -> Unit,
 
                     ) {
 
-                        Column(
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .padding(start = 5.dp)
-                                .width(100.dp)
-                                .fillMaxWidth()
-
-                        ) {
-
                             Image(
                                 painter = painterResource(id = usersList[index].playerIcon),
                                 contentDescription = null, // Description de l'image si nécessaire
@@ -158,28 +152,35 @@ fun AfficheListe(amis: List<String>, usersList: List<User>, onClose: () -> Unit,
                                 text = amis[index],
                                 color = Color.White,
                                 fontSize = 20.sp,
-                                fontFamily = fontPrincipale
+                                fontFamily = fontPrincipale,
                             )
 
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+
+
+                            Text(
+                                text = usersList[index].trophies.toString(),
+                                fontSize = 20.sp,
+                                color = Color.White,
+                                fontFamily = fontPrincipale,
+                            )
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Image(
+                                painter = painterResource(id = R.drawable.couronne_laurier),
+                                contentDescription = null, // Description de l'image si nécessaire
+                                modifier = Modifier.size(50.dp)
+                            )
                         }
 
-                        Spacer(modifier = Modifier.width(80.dp))
-
-                        Text(
-                            text = usersList[index].trophies.toString(),
-                            fontSize = 20.sp,
-                            color = Color.White,
-                            fontFamily = fontPrincipale,
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Image(
-                            painter = painterResource(id = R.drawable.couronne_laurier),
-                            contentDescription = null, // Description de l'image si nécessaire
-                            modifier = Modifier.size(50.dp)
-                        )
-
-
                     }
+
+
                     Spacer(modifier = Modifier.height(8.dp))
 
 
@@ -423,7 +424,36 @@ fun PopupWindow(
                                 )
                                 IconButton(
                                     onClick = {
-                                        // TODO
+                                        /*var userIdCatch = ""
+
+                                        getUserId(username, { userId ->
+                                            userIdCatch = userId;
+                                            user?.let { addFriendfromId(userIdCatch, it.username) }
+                                        })
+
+                                        user?.let {
+                                            getUserId(it.username, { myUserIdCatch ->
+                                                addFriendfromId(myUserIdCatch, username)
+                                                removeFriendRequest(myUserIdCatch,username)
+                                            })
+                                        }*/
+
+                                        getUserId(username) { userId ->
+                                            val userIdCatch = userId
+                                            user?.let { currentUser ->
+                                                addFriendfromId(userIdCatch, currentUser.username)
+
+                                                getUserId(currentUser.username) { myUserId ->
+                                                    addFriendfromId(myUserId, username)
+                                                    removeFriendRequest(myUserId, username)
+                                                }
+                                            }
+                                        }
+
+
+
+
+
                                     },
                                     modifier = Modifier.padding(start = 8.dp)
                                 ) {
@@ -435,7 +465,11 @@ fun PopupWindow(
                                 }
                                 IconButton(
                                     onClick = {
-                                        // TODO
+                                        var myUserIdCatch = ""
+                                        user?.let { getUserId(it.username, { userId -> myUserIdCatch = userId;
+                                            removeFriendRequest(myUserIdCatch,username)
+                                        }) }
+
                                     },
                                     modifier = Modifier.padding(start = 8.dp)
                                 ) {
@@ -595,8 +629,8 @@ fun ProfileScreen(
     val allUsersList = changeUsersList(filteredNouns = usernames.value)
     var friendsRequestVisible by remember { mutableStateOf(false) }
 
-    var friendsRequestList by remember { mutableStateOf(emptyList<String>()) }
-
+    var friendsRequestList by remember { mutableStateOf((user!!.friendsRequest)) }
+    println(friendsRequestList)
 
     Main(
         friends = listeAmis, users = usernames.value,
@@ -612,7 +646,7 @@ fun ProfileScreen(
     var user_display = remember { mutableStateOf<User?>(null) }
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (userProfilVisible) {
-        user_display.value?.let { user?.friends?.let { it1 -> ProfilWindow(onClose = { userProfilVisible = false }, user = it, !it1.contains(user_display.value!!.username))} }
+        user_display.value?.let { user?.friends?.let { it1 -> ProfilWindow(onClose = { userProfilVisible = false }, user_display = it, !it1.contains(user_display.value!!.username))} }
     }
 
 
