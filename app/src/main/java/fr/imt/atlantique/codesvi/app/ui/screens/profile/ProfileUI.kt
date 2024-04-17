@@ -205,9 +205,10 @@ fun Main(
     var isAllSelected by remember { mutableStateOf(false) } // Initialize with false
 
     Column(
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(top = 60.dp)
+            .fillMaxHeight()
     ) {
         Text(
             text = "Social",
@@ -215,11 +216,11 @@ fun Main(
             fontSize = 40.sp,
             fontFamily = fontPrincipale
         )
-        Spacer(Modifier.height(20.dp))
+        //Spacer(Modifier.height(20.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.SpaceAround,
             modifier = Modifier.fillMaxWidth()
         ) {
             Image(
@@ -230,12 +231,14 @@ fun Main(
                     .clickable(onClick = { onFriendsRequestVisible(true) })
             )
 
-            Spacer(Modifier.width(12.dp))
+            //Spacer(Modifier.width(12.dp))
 
             Box(
 
             ) {
                 TextField(
+                    modifier = Modifier.width(200.dp)
+                        .height(50.dp),
                     value = searchText,
                     onValueChange = { newText ->
                         searchText = newText
@@ -244,8 +247,8 @@ fun Main(
                         onSearchResultUsers(filteredNouns)
                     },
                     placeholder = { Text(text = "Rechercher ...") },
-                    modifier = Modifier
-                        .padding(end = 8.dp),
+                    /*modifier = Modifier
+                        .padding(end = 8.dp),*/
                     keyboardOptions = KeyboardOptions.Default.copy(
                         imeAction = ImeAction.Done,
                         keyboardType = KeyboardType.Text
