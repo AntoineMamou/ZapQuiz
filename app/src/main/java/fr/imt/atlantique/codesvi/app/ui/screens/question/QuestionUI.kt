@@ -1,7 +1,6 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.question
 
 import android.annotation.SuppressLint
-import android.icu.text.ListFormatter.Width
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
@@ -23,7 +22,6 @@ import androidx.compose.foundation.layout.Column
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,8 +40,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.TransformOrigin
@@ -117,8 +113,87 @@ val  fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
 
 var Reponse by mutableStateOf(true)
 
+var NombreQuestion = -1
+var NombreDeVies = 3
+
+var QuestionIndexList = mutableStateOf(IntArray(30)  { it }.toMutableList())
+// Recuperer la taille de la liste
+
+/*
+##################################################
+#          GENERATION DES ELEMENTS GRAPHIQUES    #
+##################################################
+*/
+
 @Composable
-fun PanneauQuestion(Hauteur : Int, Largeur : Int, Description : String){
+fun ProgressBar(coeur: Int, serieQuestion: Int) {
+
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth() // Prend toute la largeur disponible
+            .height(100.dp)
+            .background(
+                color = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(bottomEnd = 20.dp, bottomStart = 20.dp)
+            )
+        // Crée une forme avec des bords arrondis seulement en haut
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = " $serieQuestion questions réussis",
+                color = MaterialTheme.colorScheme.secondary,
+                fontFamily = fontPrincipale,
+                fontSize = 20.sp
+                // Aligner le texte au centre de la Row
+            )
+        }
+
+
+
+        Row(
+            horizontalArrangement = Arrangement.End,
+            modifier = Modifier
+                .padding(bottom = 20.dp, end = 10.dp)
+                .align(Alignment.CenterEnd)
+        ) {
+            Image(
+                painter = painterResource(id = logo),
+                contentDescription = "femer", // Indiquez une description si nécessaire
+                modifier = Modifier
+                    .size(60.dp) // Ajuster la taille de l'image selon vos besoins
+
+            )
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.Start,
+            modifier = Modifier
+                .padding(bottom = 20.dp)
+                .align(Alignment.BottomCenter)
+
+        ) {
+            repeat(coeur) {
+                Image(
+                    painter = painterResource(id = R.drawable.coeur),
+                    contentDescription = "fermer", // Indiquez une description si nécessaire
+                    modifier = Modifier.size(40.dp) // Ajuster la taille de l'image selon vos besoins
+                )
+                Spacer(modifier = Modifier.width(20.dp))
+            }
+        }
+
+
+
+    }
+
+}
+@Composable
+fun PanneauQuestion(Hauteur: Int, Largeur: Int, Description: String){
 
     Column ( modifier = Modifier
         .padding(top = 140.dp)
@@ -141,9 +216,6 @@ fun PanneauQuestion(Hauteur : Int, Largeur : Int, Description : String){
                 Horizontalbar(reverse = false, vertical = true )
 
                 Horizontalbar(reverse = true, vertical = true )
-
-
-
 
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -266,32 +338,17 @@ fun BoutonQCM(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
 
 
 
-var NombreQuestion = -1
-var NombreDeVies = 3
-
-@Composable
-fun GenererQuestion(onClick: () -> Unit){
-    val randomIndex = Random.nextInt(3) // Génère un nombre aléatoire entre 0 et 9
-    // Utilisez randomIndex pour changer la question en fonction du nombre aléatoire généré
-
-    if (randomIndex == 0) {
-        QuestionChoixMultiple(onClick)
-    }
-    if (randomIndex == 1) {
-        QuestionChoixMultiple(onClick)
-    }
-    if (randomIndex == 2) {
-        QuestionChoixMultiple(onClick)
-    }
-}
 
 
 
-
+/*
+##################################################
+#          GENERATION DE LA PROCHAINE QUESTION   #
+##################################################
+*/
 
 @Composable
 fun ChangerQuestion(onClick: () -> Unit) {
-
          if (Reponse) {
             GenererQuestion (onClick)
              NombreQuestion += 1
@@ -301,64 +358,30 @@ fun ChangerQuestion(onClick: () -> Unit) {
 
             }else {
                 GenererQuestion(onClick)
+
             }
         }
-
-
 
 }
 
 @Composable
-fun QuestionVraiFaux(onClick: () -> Unit) {
+fun GenererQuestion(onClick: () -> Unit) {
 
-    PanneauQuestion(300, 350, "Répondre par Vrai ou Faux ?")
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = 140.dp),
-        verticalArrangement = Arrangement.Bottom,
-        horizontalAlignment = Alignment.End,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Box(modifier = Modifier
-                .padding(30.dp)
-                .size(140.dp, 80.dp)
-                .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(20.dp))
-                .border(5.dp, color = Color.Green, RoundedCornerShape(20.dp))
-                .clickable(onClick = onClick)
+    val qcm = questionGeneration()
+    if (qcm != null) {
 
-                )
+        if(qcm.type == "qcm_4") { QuestionChoixMultiple(onClick, qcm) }
+        if(qcm.type == "vf") { QuestionVraiFaux(onClick, qcm) }
 
-             {
-                Text(text = "VRAI", color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.align(Alignment.Center),  fontFamily = fontPrincipale)
-            }
-
-            Box(
-                modifier = Modifier
-                    .padding(30.dp)
-                    .size(140.dp, 80.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.secondary,
-                        RoundedCornerShape(20.dp)
-                    )
-                    .border(5.dp, color = Color.Red, RoundedCornerShape(20.dp))
-                    .clickable(onClick = onClick)
-            ) {
-                Text(text = "FAUX", color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.align(Alignment.Center), fontFamily = fontPrincipale)
-            }
-            // Autres éléments que vous souhaitez inclure dans la rangée
-        }
-    }
 
     }
+}
 
 
 
-suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {
+
+
+suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //rajoute une variable en fonction du type
     return suspendCancellableCoroutine { continuation ->
         val questionsRef = databaseGlobal.getReference("questions/$theme")
         val valueEventListener = object : ValueEventListener {
@@ -367,7 +390,6 @@ suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {
                     val questionId = questionSnapshot.key?.toIntOrNull()
                     if (questionId == randomNumber) {
                         //val question = questionSnapshot.getValue(QCM::class.java)
-
 
 
                         val id = questionSnapshot.child("id").getValue(String::class.java)
@@ -421,21 +443,38 @@ suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {
 @SuppressLint("CoroutineCreationDuringComposition")
 @OptIn(DelicateCoroutinesApi::class)
 @Composable
-fun QuestionChoixMultiple(onClick: () -> Unit) {
-    val randomIndex = remember { Random.nextInt(19) }
+fun questionGeneration(): QCM? {
+    val randomIndex = remember { Random.nextInt(QuestionIndexList.value.size - 1) }
+    val randomQuestionIndex = remember { QuestionIndexList.value[randomIndex] }
     val qcmState = remember { mutableStateOf<QCM?>(null) }
 
     LaunchedEffect(randomIndex) {
-        val question = questionFromDatabase(categorie, randomIndex)
+        QuestionIndexList.value.removeAt(randomIndex)
+        println("QuestionIndexList après suppression: ${QuestionIndexList.value.size}")
+        val question = questionFromDatabase(categorie, randomQuestionIndex)
         qcmState.value = question
+
     }
 
     val qcm = qcmState.value
-    if (qcm != null) {
-        println(qcm)
-        val liste = qcm.answers
-        val Questiontxt = qcm.question
 
+
+    return qcm
+}
+
+/*
+###############################################
+#          TYPE DE QUESTIONS                  #
+###############################################
+*/
+
+
+@SuppressLint("CoroutineCreationDuringComposition")
+@OptIn(DelicateCoroutinesApi::class)
+@Composable
+fun QuestionChoixMultiple(onClick: () -> Unit, qcm: QCM ) {
+        val liste = qcm.answers.shuffled()
+        val Questiontxt = qcm.question
 
         PanneauQuestion(350, 350, Questiontxt)
         Column(
@@ -464,10 +503,38 @@ fun QuestionChoixMultiple(onClick: () -> Unit) {
             }
         }
     }
-}
 
 
 
+@Composable
+fun QuestionVraiFaux(onClick: () -> Unit, qcm: QCM) {
+
+        val liste = qcm.answers
+        val Questiontxt = qcm.question
+
+        PanneauQuestion(300, 350, Questiontxt)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 140.dp),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.End,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+
+                BoutonQCM(liste[0].answer, onClick, liste[0].isRight)
+                BoutonQCM(liste[1].answer, onClick, liste[1].isRight)
+
+
+                // Autres éléments que vous souhaitez inclure dans la rangée
+            }
+        }
+
+    }
 /*
 @Composable
 
@@ -569,78 +636,17 @@ fun QuestionText(onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun ProgressBar(coeur: Int, serieQuestion: Int) {
-
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth() // Prend toute la largeur disponible
-                .height(100.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(bottomEnd = 20.dp, bottomStart = 20.dp)
-                )
-            // Crée une forme avec des bords arrondis seulement en haut
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = " $serieQuestion questions réussis",
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontFamily = fontPrincipale,
-                    fontSize = 20.sp
-                    // Aligner le texte au centre de la Row
-                )
-            }
-
-
-
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier
-                    .padding(bottom = 20.dp, end = 10.dp)
-                    .align(Alignment.CenterEnd)
-            ) {
-                Image(
-                    painter = painterResource(id = logo),
-                    contentDescription = "femer", // Indiquez une description si nécessaire
-                    modifier = Modifier
-                        .size(60.dp) // Ajuster la taille de l'image selon vos besoins
-
-                )
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.Start,
-                modifier = Modifier
-                    .padding(bottom = 20.dp)
-                    .align(Alignment.BottomCenter)
-
-            ) {
-                repeat(coeur) {
-                    Image(
-                        painter = painterResource(id = R.drawable.coeur),
-                        contentDescription = "fermer", // Indiquez une description si nécessaire
-                        modifier = Modifier.size(40.dp) // Ajuster la taille de l'image selon vos besoins
-                    )
-                    Spacer(modifier = Modifier.width(20.dp))
-                }
-            }
-
-
-
-        }
-
-}
-
+/*
+##################################################
+#          GENERATION DU MENU DE FIN DE PARTIE   #
+##################################################
+*/
+@SuppressLint("UnrememberedMutableState")
 @Composable
 fun GameOver(
     navController : NavHostController
 ) {
+    QuestionIndexList = mutableStateOf( IntArray(20)  { it }.toMutableList())
     Column(
         modifier = Modifier
             .padding(top = 50.dp)
@@ -750,8 +756,15 @@ fun GameOver(
             Box(
                 modifier = Modifier
                     .size(180.dp, 150.dp)
-                    .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(20.dp))
-                    .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
+                    .background(
+                        color = MaterialTheme.colorScheme.secondary,
+                        RoundedCornerShape(20.dp)
+                    )
+                    .border(
+                        5.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        RoundedCornerShape(20.dp)
+                    )
                     .clickable(onClick = {
                         navController.navigate(RootScreen.Home.route);
                         NombreQuestion = 0
@@ -778,6 +791,12 @@ fun GameOver(
 
     }
 }
+
+/*
+##################################################
+#                 MODE DE JEU                    #
+##################################################
+*/
 
 @Composable
 fun Global(
