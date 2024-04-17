@@ -49,7 +49,10 @@ fun MusicPlayer() {
     // Lancer la lecture de la musique dès que le composable est attaché
     LaunchedEffect(Unit) {
         mediaPlayer.start()
+
+
     }
+
 }
 
 @Preview(showBackground = true)
