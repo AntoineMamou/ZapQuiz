@@ -127,7 +127,7 @@ suspend fun getUserInfoDatabase(
                         val id = userSnapshot.child("username").getValue(String::class.java) ?: ""
                         val password = userSnapshot.child("password").getValue(String::class.java) ?: ""
                         val trophies = userSnapshot.child("trophies").getValue(Int::class.java) ?: 0
-                        val playerIcon = userSnapshot.child("playerIcon").getValue(Int::class.java) ?: 0
+                        val playerIcon = userSnapshot.child("playerIcon").getValue(String::class.java) ?: ""
                         val title = userSnapshot.child("title").getValue(String::class.java) ?: ""
                         val connectionState = userSnapshot.child("connectionState").getValue(Boolean::class.java) ?: false
                         val victory = userSnapshot.child("victory").getValue(Int::class.java) ?: 0
@@ -187,7 +187,7 @@ fun BackgroundImage() {
 @Composable
 fun Header(settingsonClick: () -> Unit , profilOnClick: ()->Unit, user : User) {
 
-
+    val context= LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -208,7 +208,7 @@ fun Header(settingsonClick: () -> Unit , profilOnClick: ()->Unit, user : User) {
                 modifier = Modifier.size(70.dp),
                 content = {
                     Image(
-                        painter = painterResource(id = user.playerIcon),
+                        painter = painterResource(id = user.getImageResourceId(context)),
                         contentDescription = null, // Description de l'image si nécessaire
                         modifier = Modifier.fillMaxSize()
                     )
@@ -1004,6 +1004,8 @@ fun ProfilWindow(
     val windowWidth = 350.dp
     val windowHeight = 430.dp
 
+    val context = LocalContext.current
+
     // Contenu de la fenêtre modale des paramètres
     Box(
         modifier = Modifier
@@ -1066,7 +1068,7 @@ fun ProfilWindow(
                         modifier = Modifier.size(70.dp),
                         content = {
                             Image(
-                                painter = painterResource(id = user_display.playerIcon),
+                                painter = painterResource(id = user_display.getImageResourceId(context)),
                                 contentDescription = null, // Description de l'image si nécessaire
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -1216,6 +1218,7 @@ fun GameScreen(
     //ModeDeJeu()
     //StartButton(navController)
     Centre2(navController)
+
 
 
 

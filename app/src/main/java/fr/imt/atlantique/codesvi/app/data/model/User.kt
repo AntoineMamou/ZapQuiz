@@ -1,12 +1,13 @@
 package fr.imt.atlantique.codesvi.app.data.model
 
+import android.content.Context
 import fr.imt.atlantique.codesvi.app.R
 
 data class User(
     val username : String,
     val password : String,
     var trophies : Int,
-    var playerIcon : Int,
+    var playerIcon : String,
     var title : String,
     var connectionState : Boolean,
     var friends : List<String>,
@@ -21,7 +22,7 @@ data class User(
         "",
         "",
         50,
-        R.drawable.lightning,
+        "lightning",
         "Zappeur débutant",
         false,
         listOf(),
@@ -32,4 +33,10 @@ data class User(
         100,
         listOf()
     )
+
+    fun getImageResourceId(context: Context): Int {
+        return context.resources.getIdentifier(playerIcon, "drawable", context.packageName)
+    }
+
 }
+
