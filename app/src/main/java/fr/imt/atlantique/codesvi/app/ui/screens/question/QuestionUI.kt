@@ -86,14 +86,20 @@ fun Background()
 }
 
 fun removeAccentsAndUpperCase(word: String): String {
-    // Convertir le mot en minuscules
+    // Convert the word to lowercase
     var lowerCaseWord = word.toLowerCase()
 
-    // Retirer les accents en utilisant la décomposition canonique
+    // Remove accents using canonical decomposition
     val normalizedWord = Normalizer.normalize(lowerCaseWord, Normalizer.Form.NFD)
     val regex = "\\p{InCombiningDiacriticalMarks}+".toRegex()
-    return regex.replace(normalizedWord, "")
+    val withoutAccents = regex.replace(normalizedWord, "")
+
+    // Replace spaces with underscores
+    val withUnderscores = withoutAccents.replace(" ", "_")
+
+    return withUnderscores
 }
+
 
 
 var categorie = ""
