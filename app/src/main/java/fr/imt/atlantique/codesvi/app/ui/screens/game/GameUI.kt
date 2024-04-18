@@ -1064,7 +1064,12 @@ fun ProfilWindow(
 
 
                     IconButton(
-                        onClick = { },
+                        onClick = {
+                                  if(user_display.username.equals(user!!.username)){
+                                      //onClose();
+
+                                  }
+                        },
                         modifier = Modifier.size(70.dp),
                         content = {
                             Image(
