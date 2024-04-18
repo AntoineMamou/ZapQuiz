@@ -852,18 +852,8 @@ fun getUserId (usernameSearched : String, onGetUserId: (String) -> Unit) {
 
 }
 
-suspend fun <T> Task<T>.await(): T {
-    return suspendCoroutine { continuation ->
-        addOnSuccessListener { result ->
-            continuation.resume(result)
-        }
-        addOnFailureListener { exception ->
-            continuation.resumeWithException(exception)
-        }
-    }
-}
 
-fun addFriendfromId(userId : String, username_friend : String){
+fun addFriendfromId(userId : String, username_friend : String, deleteRequest : Boolean){
     val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
     val usersRef = database.getReference("utilisateurs/$userId")
 
@@ -884,6 +874,13 @@ fun addFriendfromId(userId : String, username_friend : String){
 
                     // Update the user object with the new friends list
                     user_searched.friends = updatedFriends
+
+                    if (deleteRequest){
+                        val updatedRequest = user_searched.friendsRequest.toMutableList()
+                        updatedRequest.remove(username_friend)
+
+                        user_searched.friendsRequest = updatedRequest
+                    }
 
                     // Push the updated user object back to the database
                     usersRef.setValue(user_searched)

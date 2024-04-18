@@ -424,36 +424,14 @@ fun PopupWindow(
                                 )
                                 IconButton(
                                     onClick = {
-                                        /*var userIdCatch = ""
-
-                                        getUserId(username, { userId ->
-                                            userIdCatch = userId;
-                                            user?.let { addFriendfromId(userIdCatch, it.username) }
-                                        })
-
                                         user?.let {
-                                            getUserId(it.username, { myUserIdCatch ->
-                                                addFriendfromId(myUserIdCatch, username)
-                                                removeFriendRequest(myUserIdCatch,username)
+                                            getUserId(it.username, { myUserId ->
+                                                addFriendfromId(myUserId, username, true);
+                                                getUserId(username, { userId ->
+                                                    addFriendfromId(userId, user!!.username, false)
+                                                });
                                             })
-                                        }*/
-
-                                        getUserId(username) { userId ->
-                                            val userIdCatch = userId
-                                            user?.let { currentUser ->
-                                                addFriendfromId(userIdCatch, currentUser.username)
-
-                                                getUserId(currentUser.username) { myUserId ->
-                                                    addFriendfromId(myUserId, username)
-                                                    removeFriendRequest(myUserId, username)
-                                                }
-                                            }
-                                        }
-
-
-
-
-
+                                        };
                                     },
                                     modifier = Modifier.padding(start = 8.dp)
                                 ) {
@@ -469,7 +447,6 @@ fun PopupWindow(
                                         user?.let { getUserId(it.username, { userId -> myUserIdCatch = userId;
                                             removeFriendRequest(myUserIdCatch,username)
                                         }) }
-
                                     },
                                     modifier = Modifier.padding(start = 8.dp)
                                 ) {
