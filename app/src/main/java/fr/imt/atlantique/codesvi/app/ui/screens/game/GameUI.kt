@@ -64,6 +64,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import com.google.android.gms.tasks.Task
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -90,6 +91,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.tasks.await
 import timber.log.Timber
 import java.time.format.TextStyle
 import kotlin.coroutines.resume
@@ -102,6 +104,7 @@ val  fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
 val fontChiffre  = FontFamily(Font(R.font.bubble_bobble))
 
 var user : User? = null
+
 
 fun getUser(user_eff : User){
     user = user_eff
@@ -139,7 +142,13 @@ suspend fun getUserInfoDatabase(
                             friendsList.add(friendSnapshot.value.toString())
                         }
 
-                        val user = User(id, password, trophies, playerIcon, title, connectionState, friendsList, victory, gamePlayed, peakTrophy, favoriteCategory, money)
+                        val friendsRequest = ArrayList<String>()
+                        val friendsRequestSnapshot = userSnapshot.child("friendsRequest")
+                        for (friendRequestSnapshot in friendsRequestSnapshot.children) {
+                            friendsRequest.add(friendRequestSnapshot.value.toString())
+                        }
+
+                        val user = User(id, password, trophies, playerIcon, title, connectionState, friendsList, victory, gamePlayed, peakTrophy, favoriteCategory, money, friendsRequest)
                         continuation.resume(user)
                         return
                     }
@@ -807,12 +816,189 @@ fun GridProfilComponent(user : User){
     }
 }
 
+fun getUserId (usernameSearched : String, onGetUserId: (String) -> Unit) {
+    val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+    val usersRef = database.getReference("utilisateurs")
+
+// Username to search for
+    val usernameToSearch = usernameSearched
+
+// Query the database to find the user with the matching username
+    usersRef.orderByChild("username").equalTo(usernameToSearch).addListenerForSingleValueEvent(object : ValueEventListener {
+        override fun onDataChange(dataSnapshot: DataSnapshot) {
+            if (dataSnapshot.exists()) {
+                // Loop through the dataSnapshot to get the userId
+                var userId: String? = null
+                for (snapshot in dataSnapshot.children) {
+                    userId = snapshot.key
+                    break // Break after finding the first match
+                }
+
+                if (userId != null) {
+                    println("Found userId for username '$usernameToSearch': $userId")
+                    onGetUserId(userId)
+                } else {
+                    println("UserId not found for username '$usernameToSearch'")
+                }
+            } else {
+                println("No user found with username '$usernameToSearch'")
+            }
+        }
+
+        override fun onCancelled(databaseError: DatabaseError) {
+            println("Error searching for user: $databaseError")
+        }
+    })
+
+}
+
+
+fun addFriendfromId(userId : String, username_friend : String, deleteRequest : Boolean){
+    val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+    val usersRef = database.getReference("utilisateurs/$userId")
+
+
+
+        // Friend to add
+        val friendUsername = username_friend
+
+        // Fetch the existing user's data
+        usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                val user_searched = dataSnapshot.getValue(User::class.java)
+
+                if (user_searched != null) {
+                    // Update the friends list
+                    val updatedFriends = user_searched.friends.toMutableList()
+                    updatedFriends.add(friendUsername)
+
+                    // Update the user object with the new friends list
+                    user_searched.friends = updatedFriends
+
+                    if (deleteRequest){
+                        val updatedRequest = user_searched.friendsRequest.toMutableList()
+                        updatedRequest.remove(username_friend)
+
+                        user_searched.friendsRequest = updatedRequest
+                    }
+
+                    // Push the updated user object back to the database
+                    usersRef.setValue(user_searched)
+                        .addOnSuccessListener {
+                            // Successfully added friend
+                            println("Friend added successfully!")
+                        }
+                        .addOnFailureListener { e ->
+                            // Failed to add friend
+                            println("Error adding friend: $e")
+                        }
+                } else {
+                    println("User not found")
+                }
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                println("Error fetching user: $databaseError")
+            }
+        })
+
+
+}
+
+
+
+fun addFriendRequest(userId: String, newUserName: String) {
+    val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+    val usersRef = database.getReference("utilisateurs/$userId")
+    println("userRef $usersRef")
+    println("userID $userId")
+    // Fetch the existing user's data
+    usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+        override fun onDataChange(dataSnapshot: DataSnapshot) {
+            var existingUser = dataSnapshot.getValue(User::class.java)
+            println(existingUser)
+            if (existingUser != null) {
+                // Check if newUser.username is already in the friendsRequest list
+                if (!existingUser.friendsRequest.contains(newUserName)) {
+                    // Update the friendsRequest list
+                    val updatedFriendsRequest = existingUser.friendsRequest.toMutableList()
+                    updatedFriendsRequest.add(newUserName)
+
+                    // Update the existingUser object with the new friendsRequest list
+                    existingUser.friendsRequest = updatedFriendsRequest
+
+                    // Push the updatedUser object back to the database
+                    usersRef.setValue(existingUser)
+                        .addOnSuccessListener {
+                            println("Friend request added successfully!")
+                        }
+                        .addOnFailureListener { e ->
+                            println("Error adding friend request: $e")
+                        }
+                } else {
+                    println("Friend request already exists for username '${newUserName}'")
+                }
+            } else {
+                println("User not found")
+            }
+        }
+
+        override fun onCancelled(databaseError: DatabaseError) {
+            println("Error fetching user: $databaseError")
+        }
+    })
+}
+
+fun removeFriendRequest(userId: String, newUserName: String) {
+    val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+    val usersRef = database.getReference("utilisateurs/$userId")
+
+    // Fetch the existing user's data
+    usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+        override fun onDataChange(dataSnapshot: DataSnapshot) {
+            var existingUser = dataSnapshot.getValue(User::class.java)
+
+            if (existingUser != null) {
+                // Check if newUser.username is in the friendsRequest list
+                if (existingUser.friendsRequest.contains(newUserName)) {
+                    // Update the friendsRequest list
+                    val updatedFriendsRequest = existingUser.friendsRequest.toMutableList()
+                    updatedFriendsRequest.remove(newUserName)
+
+                    // Update the existingUser object with the new friendsRequest list
+                    existingUser.friendsRequest = updatedFriendsRequest
+
+                    // Push the updatedUser object back to the database
+                    usersRef.setValue(existingUser)
+                        .addOnSuccessListener {
+                            println("Friend request removed successfully!")
+                        }
+                        .addOnFailureListener { e ->
+                            println("Error removing friend request: $e")
+                        }
+                } else {
+                    println("Friend request not found for username '${newUserName}'")
+                }
+            } else {
+                println("User not found")
+            }
+        }
+
+        override fun onCancelled(databaseError: DatabaseError) {
+            println("Error fetching user: $databaseError")
+        }
+    })
+}
+
+
+
 
 @Composable
 fun ProfilWindow(
     onClose: () -> Unit,
-    user : User,
-    isNotFriend: Boolean
+    user_display : User,
+    isNotFriend: Boolean,
+
     ){
     // La taille de la fenêtre modale des paramètres
     val windowWidth = 350.dp
@@ -880,7 +1066,7 @@ fun ProfilWindow(
                         modifier = Modifier.size(70.dp),
                         content = {
                             Image(
-                                painter = painterResource(id = user.playerIcon),
+                                painter = painterResource(id = user_display.playerIcon),
                                 contentDescription = null, // Description de l'image si nécessaire
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -897,7 +1083,7 @@ fun ProfilWindow(
 
 
                         Text(
-                            text = user.username,
+                            text = user_display.username,
                             color = Color.White,
                             fontSize = 20.sp,
                             fontFamily = fontPrincipale
@@ -906,7 +1092,7 @@ fun ProfilWindow(
                         Spacer(modifier = Modifier.width(16.dp))
 
                         Text(
-                            text = user.title,
+                            text = user_display.title,
                             color = Color.LightGray,
                             fontSize = 16.sp,
                             fontFamily = fontPrincipale
@@ -917,7 +1103,7 @@ fun ProfilWindow(
                     Spacer(modifier=Modifier.width(24.dp))
 
                     Text(
-                        text = user.trophies.toString(),
+                        text = user_display.trophies.toString(),
                         color = Color.White,
                         fontSize = 25.sp,
                         fontFamily = fontPrincipale
@@ -936,7 +1122,7 @@ fun ProfilWindow(
 
                 HorizontalBar()
 
-                GridProfilComponent(user)
+                GridProfilComponent(user_display)
 
                 HorizontalBar()
                 if(isNotFriend){
@@ -947,7 +1133,17 @@ fun ProfilWindow(
                             Text(text = "Classement")
                         }
 
-                        Button(onClick = { /*TODO*/ }) {
+                        Button(onClick = {
+                            var userIdCatch:String?= null
+                            getUserId(user_display.username,
+                                {userId -> userIdCatch = userId;
+                                    user?.username.let {
+                                        if (it != null) {
+                                            addFriendRequest(userIdCatch!!, it)
+                                        }
+                                    }
+                                })
+                        }) {
                             Text(text = "Demander en ami")
                         }
                     }

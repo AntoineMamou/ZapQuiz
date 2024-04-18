@@ -278,11 +278,11 @@ fun MultiScreen(
 
     Background()
 
-    val user1 = User("Antoine", "password", 1000, 2131099725, "Zappeur professionnel", true, listOf(), 0, 0, 1000, "Histoire", 100)
-    val user2 = User("Loic", "password", 420, 2131099725, "Zappeur débutant", true, listOf(), 0, 0, 1000, "Histoire", 100)
-    val user3 = User("Titouan", "password", 4000, 2131099725, "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100)
-    val user4 = User("Alexia", "password", 3000, 2131099725, "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100)
-    val user5 = User("Julien", "password", 600, 2131099725, "Zappeur au top", true, listOf(), 0, 0, 1000, "Histoire", 100)
+    val user1 = User("Antoine", "password", 1000, 2131099725, "Zappeur professionnel", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
+    val user2 = User("Loic", "password", 420, 2131099725, "Zappeur débutant", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
+    val user3 = User("Titouan", "password", 4000, 2131099725, "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
+    val user4 = User("Alexia", "password", 3000, 2131099725, "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
+    val user5 = User("Julien", "password", 600, 2131099725, "Zappeur au top", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
     
     //Home(listOf(user1, user2, user3,user4,user5))
 
