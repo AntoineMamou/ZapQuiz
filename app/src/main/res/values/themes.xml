@@ -12,11 +12,11 @@
 
     <!-- Splash Screen Theme pour API level 30 -->
     <style name="Theme.AppSplash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/cream_white</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_app_logo</item>
+        <item name="windowSplashScreenBackground">@color/black</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/eclair</item>
         <item name="windowSplashScreenAnimationDuration">500</item>
         <item name="postSplashScreenTheme">@style/Theme.App</item>
-        <item name="android:statusBarColor" tools:targetApi="l">@color/cream_white</item>
+        <item name="android:statusBarColor" tools:targetApi="l">@color/black</item>
         <item name="android:navigationBarColor">@color/cream_white</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
