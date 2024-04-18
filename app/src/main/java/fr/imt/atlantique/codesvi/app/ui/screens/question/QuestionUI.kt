@@ -122,7 +122,7 @@ var Reponse by mutableStateOf(true)
 var NombreQuestion = -1
 var NombreDeVies = 3
 
-var QuestionIndexList = mutableStateOf(IntArray(30)  { it }.toMutableList())
+var QuestionIndexList = mutableStateOf(IntArray(36)  { it }.toMutableList())
 // Recuperer la taille de la liste
 
 /*
@@ -378,6 +378,7 @@ fun GenererQuestion(onClick: () -> Unit) {
 
         if(qcm.type == "qcm_4") { QuestionChoixMultiple(onClick, qcm) }
         if(qcm.type == "vf") { QuestionVraiFaux(onClick, qcm) }
+        if(qcm.type == "input") { QuestionText(onClick, qcm) }
 
 
     }
@@ -541,67 +542,32 @@ fun QuestionVraiFaux(onClick: () -> Unit, qcm: QCM) {
         }
 
     }
-/*
-@Composable
 
-fun QuestionLiens(onClick: () -> Unit) {
-    PanneauQuestion(Hauteur = 100, Largeur = 350, "Assembler les colonnes ensembles")
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = 40.dp),
-        verticalArrangement = Arrangement.Bottom,
-        horizontalAlignment = Alignment.End,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            BoutonQCM(text = "Choix 1", onClick, true)
-            BoutonQCM(text = "Choix 2", onClick, true)
-        }
+fun textverification(user_answer : String, list_answers : List<Answer>): Boolean {
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            BoutonQCM(text = "Choix 3", onClick, true)
-            BoutonQCM(text = "Choix 4", onClick, true)
-
-
-            // Autres éléments que vous souhaitez inclure dans la rangée
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            BoutonQCM(text = "Choix 5", onClick, true)
-            BoutonQCM(text = "Choix 6", onClick, true)
-
-
-            // Autres éléments que vous souhaitez inclure dans la rangée
-        }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            BoutonQCM(text = "Choix 7", onClick, true)
-            BoutonQCM(text = "Choix 8", onClick, true)
-
-
-            // Autres éléments que vous souhaitez inclure dans la rangée
+    val answer = user_answer.lowercase()
+    for (answerItem in list_answers) {
+        // Vérifier si la réponse de l'utilisateur correspond à la réponse actuelle de la liste
+        if (answer == answerItem.answer.lowercase()) {
+            // Si une correspondance est trouvée, mettre reponse à vrai et sortir de la boucle
+            return true
         }
     }
+    // Si aucune correspondance n'est trouvée, mettre reponse à faux
+    return false
+
+
 }
-*/
 
 @Composable
-fun QuestionText(onClick: () -> Unit) {
-    PanneauQuestion(Hauteur = 300, Largeur = 350, "Ecriver la bonne réponse")
+fun QuestionText(onClick: () -> Unit, qcm : QCM) {
+
+    val liste = qcm.answers
+    val Questiontxt = qcm.question
+
+    var textValue by remember { mutableStateOf("") }
+
+    PanneauQuestion(Hauteur = 300, Largeur = 350, Questiontxt)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -614,7 +580,7 @@ fun QuestionText(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ) {
-            var textValue by remember { mutableStateOf("Votre réponse :") }
+
 
             TextField(
                 shape = RoundedCornerShape(20.dp),
@@ -637,7 +603,7 @@ fun QuestionText(onClick: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ){
-            BoutonQCM("Envoyer", onClick, true)
+            BoutonQCM("Envoyer", onClick, textverification(textValue,liste))
         }
     }
 }
