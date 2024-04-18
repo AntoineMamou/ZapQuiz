@@ -103,6 +103,8 @@ fun filterUsers(users: List<User>, filteredUsernames: List<String>): SnapshotSta
 
 @Composable
 fun AfficheListe(amis: List<String>, usersList: List<User>, onClose: () -> Unit, onModifyUser: (User) -> Unit ) {
+
+    val context = LocalContext.current
     val scrollState = rememberLazyListState()
 
     if (usersList.toList().size != 0) {
@@ -142,7 +144,7 @@ fun AfficheListe(amis: List<String>, usersList: List<User>, onClose: () -> Unit,
                     ) {
 
                             Image(
-                                painter = painterResource(id = usersList[index].playerIcon),
+                                painter = painterResource(id = usersList[index].getImageResourceId(context)),
                                 contentDescription = null, // Description de l'image si nécessaire
                                 modifier = Modifier.size(30.dp)
                             )

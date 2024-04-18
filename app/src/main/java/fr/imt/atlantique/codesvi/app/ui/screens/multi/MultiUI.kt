@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +66,9 @@ fun ScreenChanger(
 
 @Composable
 fun DisplayScore(user: User,score : Int) {
+
+    val context = LocalContext.current
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceAround,
@@ -87,7 +91,7 @@ fun DisplayScore(user: User,score : Int) {
 
 
             Image(
-                painter = painterResource(id = user.playerIcon),
+                painter = painterResource(id = user.getImageResourceId(context)),
                 contentDescription = null,
                 modifier = Modifier.size(60.dp)
             )
@@ -176,6 +180,9 @@ fun Test() {
 
 @Composable
 fun HomeComponent(user:User){
+
+    val context = LocalContext.current
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceAround,
@@ -204,7 +211,7 @@ fun HomeComponent(user:User){
 
 
                 Image(
-                    painter = painterResource(id = user.playerIcon),
+                    painter = painterResource(id = user.getImageResourceId(context)),
                     contentDescription = null,
                     modifier = Modifier.size(30.dp)
                 )
@@ -276,13 +283,15 @@ fun MultiScreen(
     navController: NavHostController
 ) {
 
+    val context = LocalContext.current
+
     Background()
 
-    val user1 = User("Antoine", "password", 1000, 2131099725, "Zappeur professionnel", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
-    val user2 = User("Loic", "password", 420, 2131099725, "Zappeur débutant", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
-    val user3 = User("Titouan", "password", 4000, 2131099725, "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
-    val user4 = User("Alexia", "password", 3000, 2131099725, "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
-    val user5 = User("Julien", "password", 600, 2131099725, "Zappeur au top", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
+    val user1 = User("Antoine", "password", 1000, "lightning", "Zappeur professionnel", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
+    val user2 = User("Loic", "password", 420, "lightning", "Zappeur débutant", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
+    val user3 = User("Titouan", "password", 4000, "lightning", "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
+    val user4 = User("Alexia", "password", 3000, "lightning", "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
+    val user5 = User("Julien", "password", 600, "lightning", "Zappeur au top", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
     
     //Home(listOf(user1, user2, user3,user4,user5))
 
