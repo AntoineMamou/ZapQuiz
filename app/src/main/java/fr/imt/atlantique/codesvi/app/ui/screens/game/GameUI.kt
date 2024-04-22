@@ -16,19 +16,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.paddingFrom
-import androidx.compose.foundation.layout.paddingFromBaseline
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -54,50 +52,30 @@ import androidx.compose.ui.unit.sp
 import fr.imt.atlantique.codesvi.app.R
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.AlignmentLine
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import com.google.android.gms.tasks.Task
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
-import fr.imt.atlantique.codesvi.app.data.model.Answer
-import fr.imt.atlantique.codesvi.app.data.model.QCM
 import fr.imt.atlantique.codesvi.app.data.model.User
-import fr.imt.atlantique.codesvi.app.ui.navigation.AppState
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
-import fr.imt.atlantique.codesvi.app.ui.navigation.rememberAppState
-import fr.imt.atlantique.codesvi.app.ui.screens.login.hacherMotDePasse
-import fr.imt.atlantique.codesvi.app.ui.screens.question.databaseGlobal
-import fr.imt.atlantique.codesvi.app.ui.screens.shop.ShopState
-import fr.imt.atlantique.codesvi.app.ui.screens.solo.rememberSoloState
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.tasks.await
 import timber.log.Timber
-import java.time.format.TextStyle
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import kotlin.random.Random
 
 
 val  fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
@@ -105,6 +83,9 @@ val fontChiffre  = FontFamily(Font(R.font.bubble_bobble))
 
 var user : User? = null
 
+fun getAnyImageId(image: String, context: Context): Int {
+    return context.resources.getIdentifier(image, "drawable", context.packageName)
+}
 
 fun getUser(user_eff : User){
     user = user_eff
@@ -502,25 +483,26 @@ fun StartButton2(navController: NavHostController){
             )
 
 
-
             .border(
                 5.dp,
                 color = MaterialTheme.colorScheme.primary,
                 RoundedCornerShape(15.dp)
             )
-            .clickable(onClick = {if(currentIndex <= 0) {
-                currentIndex=0
-                navController.navigate(HomeRootScreen.Duel.route)
-            }
+            .clickable(onClick = {
+                if (currentIndex <= 0) {
+                    currentIndex = 0
+                    navController.navigate(HomeRootScreen.Duel.route)
+                }
 
-                if(currentIndex == 1) {
+                if (currentIndex == 1) {
                     navController.navigate(HomeRootScreen.Solo.route)
                 }
 
-                if(currentIndex >= 2) {
-                    currentIndex=2
+                if (currentIndex >= 2) {
+                    currentIndex = 2
                     navController.navigate(HomeRootScreen.Multi.route)
-                }})
+                }
+            })
 
     ){
         Text(text = "Start",
@@ -990,14 +972,192 @@ fun removeFriendRequest(userId: String, newUserName: String) {
     })
 }
 
+fun changeAnyAtomic(
+    trophies: Int = user!!.trophies,
+    playerIcon: String = user!!.playerIcon,
+    title: String = user!!.title,
+    connectionState: Boolean = user!!.connectionState,
+    victory: Int = user!!.victory,
+    game_played: Int = user!!.game_played,
+    peak_trophy: Int = user!!.peak_trophy,
+    favorite_category: String = user!!.favorite_category,
+    money: Int = user!!.money
+    ) {
+    getUserId(user!!.username) { userId ->
+        val database =
+            FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+        val usersRef = database.getReference("utilisateurs/$userId")
+
+        // Fetch the existing user's data
+        usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                var existingUser = dataSnapshot.getValue(User::class.java)
+
+                if (existingUser != null) {
+                    // Check if newUser.username is in the friendsRequest list
+                    if (existingUser.trophies != trophies) {
+
+                        existingUser.trophies = trophies
+                        usersRef.setValue(existingUser)
+                            .addOnFailureListener { e ->
+                                println("Error changing atomic data: $e")
+                            }
+                    }
+                    if (existingUser.playerIcon != playerIcon) {
+
+                        existingUser.playerIcon = playerIcon
+                        usersRef.setValue(existingUser)
+                            .addOnFailureListener { e ->
+                                println("Error changing atomic data: $e")
+                            }
+                    }
+                    if (existingUser.title != title) {
+
+                        existingUser.title = title
+                        usersRef.setValue(existingUser)
+                            .addOnFailureListener { e ->
+                                println("Error changing atomic data: $e")
+                            }
+                    }
+                    if (existingUser.victory != victory) {
+
+                        existingUser.victory = victory
+                        usersRef.setValue(existingUser)
+                            .addOnFailureListener { e ->
+                                println("Error changing atomic data: $e")
+                            }
+                    }
+                    if (existingUser.game_played != game_played) {
+
+                        existingUser.game_played = game_played
+                        usersRef.setValue(existingUser)
+                            .addOnFailureListener { e ->
+                                println("Error changing atomic data: $e")
+                            }
+                    }
+                    if (existingUser.peak_trophy != peak_trophy) {
+
+                        existingUser.peak_trophy = peak_trophy
+                        usersRef.setValue(existingUser)
+                            .addOnFailureListener { e ->
+                                println("Error changing atomic data: $e")
+                            }
+                    }
+                    if (existingUser.favorite_category != favorite_category) {
+
+                        existingUser.favorite_category = favorite_category
+                        usersRef.setValue(existingUser)
+                            .addOnFailureListener { e ->
+                                println("Error changing atomic data: $e")
+                            }
+                    }
+                    if (existingUser.money != money) {
+
+                        existingUser.money = money
+                        usersRef.setValue(existingUser)
+                            .addOnFailureListener { e ->
+                                println("Error changing atomic data: $e")
+                            }
+                    }
+                    if (existingUser.connectionState != connectionState) {
+
+                        existingUser.connectionState = connectionState
+                        usersRef.setValue(existingUser)
+                            .addOnFailureListener { e ->
+                                println("Error changing atomic data: $e")
+                            }
+                    }
+                } else {
+                    println("User not found")
+                }
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                println("Error fetching user: $databaseError")
+            }
+        })
+    }
+}
+
+@Composable
+fun ScrollableColumnWithImages(imageList: List<String>, onClose: () -> Unit) {
+    val context = LocalContext.current
 
 
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onClose),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.8F)
+                .height(200.dp)
+                .align(Alignment.Center)
+                .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(15.dp))
+                .border(
+                    width = 8.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(15.dp)
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = MaterialTheme.colorScheme.secondary,
+                        RoundedCornerShape(15.dp)
+                    )
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.SpaceAround,
+                horizontalAlignment = Alignment.CenterHorizontally
+
+            ) {
+                Text("Changer d'avatar",
+                    fontFamily = fontPrincipale,
+                    color = Color.White,
+                    fontSize = 20.sp
+                )
+
+                Spacer(modifier = Modifier.width(15.dp))
+
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    items(imageList) { imageRes ->
+                        Image(
+                            painter = painterResource(id = getAnyImageId(imageRes, context)),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .height(50.dp)
+                                .width((50.dp))
+                                .clickable {
+                                    // Handle image click here
+                                    changeAnyAtomic(playerIcon = imageRes);
+                                    onClose()
+                                },
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                }
+
+                Button(onClick = onClose) {
+                    Text("Fermer")
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun ProfilWindow(
     onClose: () -> Unit,
     user_display : User,
     isNotFriend: Boolean,
+    onDisplayIcons: () -> Unit
 
     ){
     // La taille de la fenêtre modale des paramètres
@@ -1066,7 +1226,9 @@ fun ProfilWindow(
                     IconButton(
                         onClick = {
                                   if(user_display.username.equals(user!!.username)){
-                                      //onClose();
+                                      onClose();
+                                      onDisplayIcons()
+
 
                                   }
                         },
@@ -1189,9 +1351,9 @@ fun GameScreen(
     val userState = remember {
         mutableStateOf<User?>(null)
     }
-    LaunchedEffect(userState){
+    LaunchedEffect(userState) {
         val user = username?.let { getUserInfoDatabase(it) }
-        userState.value=user
+        userState.value = user
     }
 
     userState.value?.let { getUser(it) }
@@ -1207,29 +1369,48 @@ fun GameScreen(
     }
 
 
+    var changeIconVisible by remember { mutableStateOf(false) }
+    var icons by remember {
+        mutableStateOf(listOf(
+            "lightning", "lightning_blue", "lightning_black",
+            "lightning_red", "lightning_green", "lightning_white",
+            "lightning_purple","lightning_pink"
+        ))
+    }
+
+
+
+
     //Permet de gérer l'affichage ou non de la fenêtre de profil
     var profilVisible by remember { mutableStateOf(false) }
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (profilVisible) {
-        userState.value?.let { ProfilWindow(onClose = { profilVisible = false }, it, false) }
+        userState.value?.let {
+            ProfilWindow(
+                onClose = { profilVisible = false },
+                it,
+                false,
+                onDisplayIcons = { changeIconVisible = true })
+        }
     }
 
 
+
+
     BackgroundImage()
-    userState.value?.let { Header ({ settingsModalVisible = true} , {profilVisible=true }, it) }
+    userState.value?.let { Header({ settingsModalVisible = true }, { profilVisible = true }, it) }
     Logo()
     //MainGame()
     //ModeDeJeu()
     //StartButton(navController)
     Centre2(navController)
 
-
-
-
-
-
-
+    if (changeIconVisible) {
+    ScrollableColumnWithImages(
+        icons, onClose = {changeIconVisible = false}
+    )
+    }
 
 
 }
