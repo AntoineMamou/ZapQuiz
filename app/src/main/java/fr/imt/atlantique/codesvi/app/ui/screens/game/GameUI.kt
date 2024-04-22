@@ -1136,7 +1136,7 @@ fun ProfilWindow(
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()) {
-                        Button(onClick = { /*TODO*/ }) {
+                        Button(onClick = { /*TODO  */ }) {
                             Text(text = "Classement")
                         }
 
