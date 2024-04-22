@@ -123,7 +123,7 @@ suspend fun getUserInfoDatabase(
                     val userSearched = userSnapshot.child("username").getValue(String::class.java)
 
                     if (userSearched == username) {
-
+                        Timber.d("debut pour $userSearched")
                         val id = userSnapshot.child("username").getValue(String::class.java) ?: ""
                         val password = userSnapshot.child("password").getValue(String::class.java) ?: ""
                         val trophies = userSnapshot.child("trophies").getValue(Int::class.java) ?: 0
@@ -147,7 +147,7 @@ suspend fun getUserInfoDatabase(
                         for (friendRequestSnapshot in friendsRequestSnapshot.children) {
                             friendsRequest.add(friendRequestSnapshot.value.toString())
                         }
-
+                        Timber.d("fini pour $userSearched")
                         val user = User(id, password, trophies, playerIcon, title, connectionState, friendsList, victory, gamePlayed, peakTrophy, favoriteCategory, money, friendsRequest)
                         continuation.resume(user)
                         return
