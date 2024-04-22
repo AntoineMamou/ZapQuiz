@@ -2,6 +2,7 @@ package fr.imt.atlantique.codesvi.app.ui.screens.profile
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -36,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -58,8 +61,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -76,10 +83,16 @@ import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
 import fr.imt.atlantique.codesvi.app.ui.screens.game.removeFriendRequest
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.math.max
 import kotlin.math.min
 
 val fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
@@ -106,6 +119,9 @@ fun AfficheListe(amis: List<String>, usersList: List<User>, onClose: () -> Unit,
 
     val context = LocalContext.current
     val scrollState = rememberLazyListState()
+
+    println("usersList a affiche : ${usersList.toList()}")
+    println("amis a affiche : ${amis.toList()}")
 
     if (usersList.toList().size != 0) {
 
@@ -210,7 +226,8 @@ fun Main(
     Column(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(top = 60.dp)
+        modifier = Modifier
+            .padding(top = 60.dp)
             .fillMaxHeight()
     ) {
         Text(
@@ -240,7 +257,8 @@ fun Main(
 
             ) {
                 TextField(
-                    modifier = Modifier.width(200.dp)
+                    modifier = Modifier
+                        .width(200.dp)
                         .height(50.dp),
                     value = searchText,
                     onValueChange = { newText ->
@@ -386,7 +404,11 @@ fun PopupWindow(
                 HorizontalDivider(
                     modifier = Modifier
                         .height(10.dp)
-                        .border(1.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)),
+                        .border(
+                            1.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(2.dp)
+                        ),
                     thickness = 5.dp,
                     color = MaterialTheme.colorScheme.primary
 
@@ -463,7 +485,11 @@ fun PopupWindow(
                             HorizontalDivider(
                                 modifier = Modifier
                                     .height(5.dp)
-                                    .border(1.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)),
+                                    .border(
+                                        1.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        RoundedCornerShape(2.dp)
+                                    ),
                                 thickness = 2.dp,
                                 color = MaterialTheme.colorScheme.primary
 
@@ -516,7 +542,7 @@ suspend fun getAllUsernames(): List<String> {
 }
 
 @Composable
-fun changeUsersList(filteredNouns: List<String>): SnapshotStateList<User> {
+fun changeUsersList2(filteredNouns: List<String>): SnapshotStateList<User> {
     var usersList by remember { mutableStateOf<SnapshotStateList<User>>(mutableStateListOf()) }
 
     val coroutineScope = rememberCoroutineScope()
@@ -543,7 +569,104 @@ fun changeUsersList(filteredNouns: List<String>): SnapshotStateList<User> {
     return usersList
 }
 
+@Composable
+fun changeUsersList(filteredNouns: List<String>): SnapshotStateList<User> {
+    var usersList by remember { mutableStateOf<SnapshotStateList<User>>(mutableStateListOf()) }
+    val coroutineScope = rememberCoroutineScope()
 
+    LaunchedEffect(filteredNouns.joinToString()) {
+        val newUsersList = mutableListOf<User>()
+        val jobs = mutableListOf<Job>()
+
+        for (username in filteredNouns) {
+            val job = coroutineScope.launch {
+                val user = getUserInfoDatabase(username)
+                user?.let {
+                    synchronized(newUsersList) {
+                        newUsersList.add(it)
+                    }
+                }
+            }
+            jobs.add(job)
+        }
+
+        // Attendre que toutes les coroutines soient terminées
+        jobs.joinAll()
+
+        // Mettre à jour la liste des utilisateurs une fois toutes les données chargées
+        usersList = mutableStateListOf(*newUsersList.toTypedArray())
+    }
+
+    return usersList
+}
+
+
+@Composable
+fun LoadingSpinner() {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        CircularProgressIndicator(
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(50.dp)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewLoadingSpinner() {
+    LoadingSpinner()
+}
+
+
+
+class UserViewModel : ViewModel() {
+    private val _usersList = MutableStateFlow<SnapshotStateList<User>>(mutableStateListOf())
+    val usersList: StateFlow<SnapshotStateList<User>> = _usersList
+
+    private val _allUsersList = MutableStateFlow<SnapshotStateList<User>>(mutableStateListOf())
+    val allUsersList: StateFlow<SnapshotStateList<User>> = _allUsersList
+
+
+    suspend fun fetchUsersForNouns(filteredNouns: List<String>) {
+        viewModelScope.launch {
+            val newUsersList = mutableListOf<User>()
+            for (username in filteredNouns) {
+                val user = getUserInfoDatabase(username) // Assume this is a suspend function
+                user?.let {
+                    newUsersList.add(it)
+                }
+            }
+            _usersList.value = mutableStateListOf(*newUsersList.toTypedArray())
+        }
+    }
+
+    fun fetchAllUsersForNouns(filteredNouns: List<String>) {
+        viewModelScope.launch {
+            val newUsersList = mutableListOf<User>()
+            for (username in filteredNouns) {
+                val user = getUserInfoDatabase(username) // Assume this is a suspend function
+                user?.let {
+                    newUsersList.add(it)
+                }
+            }
+            _allUsersList.value = mutableStateListOf(*newUsersList.toTypedArray())
+        }
+    }
+
+    fun updateUsersList(newUsers: List<User>) {
+        viewModelScope.launch {
+            // Créez une nouvelle SnapshotStateList avec les nouveaux utilisateurs
+            val snapshotList = mutableStateListOf<User>().apply {
+                addAll(newUsers)
+            }
+            _usersList.value = snapshotList
+        }
+    }
+
+}
 
 
 
@@ -553,6 +676,9 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     navController : NavHostController
 ) {
+
+    val tag: String? = "MyAppTag"
+    Log.d(tag ?: "DefaultTag", "Bonjour")
 
     val context = LocalContext.current
     val sharedPreferences: SharedPreferences by lazy {
@@ -602,19 +728,42 @@ fun ProfileScreen(
     }
 
 
+
+    /*PROBLEME ICI */
     var filteredNouns by remember { mutableStateOf(listeAmis) }
-    var usersList = remember { mutableStateListOf<User>() }
-    usersList = changeUsersList(filteredNouns = filteredNouns)
-    val allUsersList = changeUsersList(filteredNouns = usernames.value)
+
+    val viewModel: UserViewModel = viewModel()
+    val usersList by viewModel.usersList.collectAsState()
+    val allUsersList by viewModel.allUsersList.collectAsState()
+
+   // usersList= changeUsersList(filteredNouns = filteredNouns)
+    //allUsersList = changeUsersList(filteredNouns = usernames.value)
+    //val allUsersList = listOf<User>()
+
+    LaunchedEffect(filteredNouns) {
+        println("avant modif ${usersList.toList()}")
+        viewModel.fetchUsersForNouns(filteredNouns)
+        println("apres modif ${usersList.toList()}")
+    }
+
+    LaunchedEffect(usernames) {
+        viewModel.fetchAllUsersForNouns(usernames.value)
+    }
+
+
     var friendsRequestVisible by remember { mutableStateOf(false) }
+    /*#######################################################################*/
+
 
     var friendsRequestList by remember { mutableStateOf((user!!.friendsRequest)) }
     println(friendsRequestList)
 
+    println("users : $usernames")
+
     Main(
         friends = listeAmis, users = usernames.value,
         { filteredNounsList -> filteredNouns = filteredNounsList },
-        { filteredNouns -> usersList = filterUsers(allUsersList, filteredNouns)},
+        { filteredNouns -> viewModel.updateUsersList(filterUsers(allUsersList, filteredNouns))},
         {bool -> friendsRequestVisible = bool},
         !friendsRequestList.isEmpty()
     )
@@ -628,8 +777,17 @@ fun ProfileScreen(
         user_display.value?.let { user?.friends?.let { it1 -> ProfilWindow(onClose = { userProfilVisible = false }, user_display = it, !it1.contains(user_display.value!!.username))} }
     }
 
+    if(usersList.isNotEmpty()) {
+        AfficheListe(
+            amis = filteredNouns,
+            usersList = usersList,
+            onClose = { userProfilVisible = false },
+            { user -> user_display.value = user; userProfilVisible = true })
+    }
+    else{
+        PreviewLoadingSpinner()
+    }
 
-    AfficheListe(amis = filteredNouns, usersList = usersList, onClose = { userProfilVisible = false }, {user -> user_display.value = user; userProfilVisible = true})
 
     if (friendsRequestVisible){
         PopupWindow(friends_request = friendsRequestList, onClose = {friendsRequestVisible = false})
