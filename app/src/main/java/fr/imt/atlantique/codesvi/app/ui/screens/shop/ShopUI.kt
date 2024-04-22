@@ -400,7 +400,7 @@ fun ShopScreen(
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (profilVisible) {
-        user?.let { ProfilWindow(onClose = { profilVisible = false }, it, false) }
+        user?.let { ProfilWindow(onClose = { profilVisible = false }, it, false, {}) }
     }
 
 

@@ -702,7 +702,7 @@ fun ProfileScreen(
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (profilVisible) {
-        user?.let { ProfilWindow(onClose = { profilVisible = false }, it, false) }
+        user?.let { ProfilWindow(onClose = { profilVisible = false }, it, false, {}) }
     }
 
 
@@ -774,7 +774,7 @@ fun ProfileScreen(
     var user_display = remember { mutableStateOf<User?>(null) }
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (userProfilVisible) {
-        user_display.value?.let { user?.friends?.let { it1 -> ProfilWindow(onClose = { userProfilVisible = false }, user_display = it, !it1.contains(user_display.value!!.username))} }
+        user_display.value?.let { user?.friends?.let { it1 -> ProfilWindow(onClose = { userProfilVisible = false }, user_display = it, !it1.contains(user_display.value!!.username), {})} }
     }
 
     if(usersList.isNotEmpty()) {
