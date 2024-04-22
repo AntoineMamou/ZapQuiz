@@ -1132,11 +1132,11 @@ fun ProfilWindow(
                 GridProfilComponent(user_display)
 
                 HorizontalBar()
-                if(isNotFriend){
+                if(isNotFriend && user_display.username != (user!!.username)){
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()) {
-                        Button(onClick = { /*TODO*/ }) {
+                        Button(onClick = { /*TODO  */ }) {
                             Text(text = "Classement")
                         }
 
