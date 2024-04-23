@@ -15,13 +15,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,22 +31,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import com.google.firebase.FirebaseApp
-import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import com.google.firebase.database.ktx.database
-import com.google.firebase.ktx.Firebase
 import fr.imt.atlantique.codesvi.app.R
-import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import androidx.compose.material3.SearchBar as SearchBar1
 import timber.log.Timber
 import java.security.MessageDigest
 import java.util.regex.Pattern
@@ -87,33 +85,53 @@ fun isPseudoConforme(pseudo: String): Boolean {
 }
 
 // Fonction pour vérifier si le mot de passe est conforme
-fun isMotDePasseConforme(motDePasse: String): Boolean {
-    // Vérifier si le mot de passe fait au moins 8 caractères
+fun isMotDePasseConforme(motDePasse: String): Pair<Boolean, String> {
+    // Vérifier la longueur du mot de passe
     if (motDePasse.length < 8) {
-        return false
+        return Pair(false, "Le mot de passe doit contenir au moins 8 caractères.")
     }
-    // Vérifier si le mot de passe contient au moins un caractère spécial ou une majuscule
+
+    // Vérifier la présence de caractères spéciaux
     val specialCharacterPattern = Pattern.compile("[^a-zA-Z0-9 ]")
     val hasSpecialCharacter = specialCharacterPattern.matcher(motDePasse).find()
+    if (!hasSpecialCharacter) {
+        return Pair(false, "Le mot de passe doit contenir au moins un caractère spécial.")
+    }
+
+    // Vérifier la présence de majuscules
     val hasUpperCase = motDePasse.any { it.isUpperCase() }
-    val hasLowerCase = motDePasse.any {it.isLowerCase()}
-    return (hasSpecialCharacter && hasUpperCase && hasLowerCase)
+    if (!hasUpperCase) {
+        return Pair(false, "Le mot de passe doit contenir au moins une majuscule.")
+    }
+
+    // Vérifier la présence de minuscules
+    val hasLowerCase = motDePasse.any { it.isLowerCase() }
+    if (!hasLowerCase) {
+        return Pair(false, "Le mot de passe doit contenir au moins une minuscule.")
+    }
+
+    return Pair(true, "")
 }
 
 
 // Fonction pour créer un compte utilisateur
-fun creerCompte(pseudo: String, motDePasse: String): Boolean {
-    // Vérifier si le pseudo et le mot de passe sont conformes
-    return if (isPseudoConforme(pseudo) && isMotDePasseConforme(motDePasse)) {
-        // Si oui, ajouter l'utilisateur à la base de données
-        ajouterUtilisateur(pseudo, motDePasse)
-        true
-    } else {
-        // Sinon, afficher un message d'erreur ou effectuer une autre action
-        // Par exemple :
-        false
+fun creerCompte(pseudo: String, motDePasse: String, showError: (String) -> Unit): Boolean {
+    val pseudoConforme = isPseudoConforme(pseudo)
+    if (!pseudoConforme) {
+        showError("Le pseudo n'est pas conforme.")
+        return false
     }
+
+    val (motDePasseConforme, errorMessage) = isMotDePasseConforme(motDePasse)
+    if (!motDePasseConforme) {
+        showError(errorMessage)
+        return false
+    }
+
+    ajouterUtilisateur(pseudo, motDePasse)
+    return true
 }
+
 
 
 fun connecterUtilisateur(
@@ -122,14 +140,14 @@ fun connecterUtilisateur(
     onNavigateToHome: () -> Unit,
     sharedPreferences: SharedPreferences,
     navController: NavHostController
-): Boolean {
+){
     val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
     val usersRef = database.getReference("utilisateurs")
 
-    var x=false
+    var found = false
 
     usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
-        override fun onDataChange(snapshot: DataSnapshot) {
+        override  fun onDataChange(snapshot: DataSnapshot) {
             for (userSnapshot in snapshot.children) {
                 val userPseudo = userSnapshot.child("username").getValue(String::class.java)
                 val userMotDePasse = userSnapshot.child("password").getValue(String::class.java)
@@ -142,14 +160,15 @@ fun connecterUtilisateur(
                     editor.putBoolean("first_login", false) // Mettre à jour le premier login
                     editor.apply()
                     navController.navigate(RootScreen.Home.route)
-                }
-                else{
-                    x=true
-                    //afficheSnackBar.value ="pseudo ou mot de passe incorrect"
+                    found = true
+                    break
                 }
             }
 
-            Timber.e("Échec de la connexion pour l'utilisateur : $pseudo")
+            if (!found) {
+                Timber.e("Échec de la connexion pour l'utilisateur : $pseudo")
+                // Affichage d'un Snackbar en cas de pseudo ou mot de passe incorrect
+            }
 
 
         }
@@ -159,8 +178,111 @@ fun connecterUtilisateur(
 
         }
     })
-    return x
 }
+
+
+class LoginViewModel : ViewModel() {
+    private val _snackbarFlow = MutableSharedFlow<String>()
+    val snackbarFlow = _snackbarFlow.asSharedFlow()
+
+    fun connecterUtilisateur(pseudo: String, motDePasse: String, sharedPreferences: SharedPreferences, navController: NavHostController) {
+        val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+        val usersRef = database.getReference("utilisateurs")
+
+        usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                var found = false
+                for (userSnapshot in snapshot.children) {
+                    val userPseudo = userSnapshot.child("username").getValue(String::class.java)
+                    val userMotDePasse = userSnapshot.child("password").getValue(String::class.java)
+
+                    if (userPseudo == pseudo && userMotDePasse == hacherMotDePasse(motDePasse)) {
+                        Timber.e("Connexion réussie pour l'utilisateur : $pseudo")
+                        sharedPreferences.edit().apply {
+                            putBoolean("connexion", true)
+                            putString("username", pseudo)
+                            putBoolean("first_login", false)
+                            apply()
+                        }
+                        navController.navigate(RootScreen.Home.route)
+                        found = true
+                        break
+                    }
+                }
+
+                if (!found) {
+                    viewModelScope.launch {
+                        _snackbarFlow.emit("Pseudo ou mot de passe incorrect")
+                    }
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Timber.e("Erreur lors de la connexion : ${error.message}")
+            }
+        })
+    }
+
+    fun creerCompte(pseudo: String, motDePasse: String, sharedPreferences: SharedPreferences,navController: NavHostController) {
+        if (!isPseudoConforme(pseudo)) {
+            viewModelScope.launch {
+                _snackbarFlow.emit("Le pseudo n'est pas conforme.")
+            }
+            return
+        }
+
+        val (motDePasseConforme, errorMessage) = isMotDePasseConforme(motDePasse)
+        if (!motDePasseConforme) {
+            viewModelScope.launch {
+                _snackbarFlow.emit(errorMessage)
+            }
+            return
+        }
+
+        ajouterUtilisateur(pseudo, motDePasse)
+        val editor = sharedPreferences.edit();
+        editor.putBoolean("connexion", true);
+        editor.putString("username",pseudo);
+        editor.putBoolean("first_login", false); // Mettre à jour le premier login
+        editor.apply();
+        navController.navigate(RootScreen.Home.route)
+    }
+
+    private fun isMotDePasseConforme(motDePasse: String): Pair<Boolean, String> {
+        if (motDePasse.length < 8) {
+            return Pair(false, "Le mot de passe doit contenir au moins 8 caractères.")
+        }
+
+        val specialCharacterPattern = Pattern.compile("[^a-zA-Z0-9 ]")
+        val hasSpecialCharacter = specialCharacterPattern.matcher(motDePasse).find()
+        if (!hasSpecialCharacter) {
+            return Pair(false, "Le mot de passe doit contenir au moins un caractère spécial.")
+        }
+
+        val hasUpperCase = motDePasse.any { it.isUpperCase() }
+        if (!hasUpperCase) {
+            return Pair(false, "Le mot de passe doit contenir au moins une majuscule.")
+        }
+
+        val hasLowerCase = motDePasse.any { it.isLowerCase() }
+        if (!hasLowerCase) {
+            return Pair(false, "Le mot de passe doit contenir au moins une minuscule.")
+        }
+
+        return Pair(true, "")
+    }
+
+    private fun isPseudoConforme(pseudo: String): Boolean {
+        // Vérifier si le pseudo est vide
+        if (pseudo.isEmpty()) {
+            return false
+        }
+        // Vérifier si le pseudo contient uniquement des caractères alphanumériques
+        return Pattern.matches("[a-zA-Z0-9]+", pseudo)
+    }
+
+}
+
 
 
 @Composable
@@ -185,6 +307,16 @@ fun LoginScreen(
 
     val snackbarHostState = remember { SnackbarHostState() } // Créez l'état de la SnackbarHost
 
+    val viewModel : LoginViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        viewModel.snackbarFlow.collect { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
 
 
@@ -244,17 +376,14 @@ fun LoginScreen(
 
                     Row {
                         Button(onClick = {
-                            connecterUtilisateur(pseudo, motDePasse, onNavigateToHome,sharedPreferences, navController)
+                            viewModel.connecterUtilisateur(pseudo, motDePasse, sharedPreferences, navController)
 
                         }) {
                             Text(text = "Se Connecter ")
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(onClick = {
-                            val x = creerCompte(pseudo, motDePasse);
-                            if (x) {
-                                onNavigateToHome()
-                            }
+                            viewModel.creerCompte(pseudo, motDePasse,sharedPreferences,navController)
                         }) {
                             Text(text = "Créer un compte ")
                         }

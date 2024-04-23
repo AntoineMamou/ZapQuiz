@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,7 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,6 +35,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,9 +56,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -71,6 +71,9 @@ import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import kotlin.coroutines.resume
@@ -1080,7 +1083,11 @@ fun changeAnyAtomic(
 }
 
 @Composable
-fun ScrollableColumnWithImages(imageList: List<String>, onClose: () -> Unit) {
+fun ScrollableColumnWithImages(
+    imageList: List<String>,
+    onClose: () -> Unit,
+    viewModel: GameViewModel
+) {
     val context = LocalContext.current
 
 
@@ -1136,7 +1143,7 @@ fun ScrollableColumnWithImages(imageList: List<String>, onClose: () -> Unit) {
                                 .width((50.dp))
                                 .clickable {
                                     // Handle image click here
-                                    changeAnyAtomic(playerIcon = imageRes);
+                                    viewModel.changeAnyAtomicV2(playerIcon = imageRes);
                                     onClose()
                                 },
                         )
@@ -1330,13 +1337,134 @@ fun ProfilWindow(
 }
 
 
+class GameViewModel : ViewModel() {
+    private val _userState = MutableStateFlow<User?>(null)
+    val userState: StateFlow<User?> = _userState.asStateFlow()
+
+    fun loadUser(username: String?) {
+        viewModelScope.launch {
+            username?.let {
+                val user = getUserInfoDatabase(it)
+                _userState.value = user
+            }
+        }
+    }
+
+
+    fun changeAnyAtomicV2(
+        trophies: Int? = _userState.value?.trophies,
+        playerIcon: String? = _userState.value?.playerIcon,
+        title: String? = _userState.value?.title,
+        connectionState: Boolean? = _userState.value?.connectionState,
+        victory: Int? = _userState.value?.victory,
+        game_played: Int? = _userState.value?.game_played,
+        peak_trophy: Int? = _userState.value?.peak_trophy,
+        favorite_category: String? = _userState.value?.favorite_category,
+        money: Int? = _userState.value?.money
+    ) {
+        getUserId(user!!.username) { userId ->
+            val database =
+                FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+            val usersRef = database.getReference("utilisateurs/$userId")
+
+            usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    var existingUser = dataSnapshot.getValue(User::class.java)
+
+                    if (existingUser != null) {
+                        var isUpdated = false
+
+
+                        if (existingUser.playerIcon != playerIcon) {
+                            if (playerIcon != null) {
+                                existingUser.playerIcon = playerIcon
+                                isUpdated = true
+                            }
+                        }
+
+
+                        if (existingUser.title != title) {
+                            if (title != null) {
+                                existingUser.title = title
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.victory != victory) {
+                            if (victory != null) {
+                                existingUser.victory = victory
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.game_played != game_played) {
+                            if (game_played != null) {
+                                existingUser.game_played = game_played
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.peak_trophy != peak_trophy) {
+                            if (peak_trophy != null) {
+                                existingUser.peak_trophy = peak_trophy
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.favorite_category != favorite_category) {
+                            if (favorite_category != null) {
+                                existingUser.favorite_category = favorite_category
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.money != money) {
+                            if (money != null) {
+                                existingUser.money = money
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.connectionState != connectionState) {
+                            if (connectionState != null) {
+                                existingUser.connectionState = connectionState
+                            }
+                        }
+
+                        if (existingUser.trophies != trophies) {
+                            if (trophies != null) {
+                                existingUser.trophies = trophies
+                            }
+                        }
+
+                        if (isUpdated) {
+                            usersRef.setValue(existingUser)
+                                .addOnSuccessListener {
+                                    // Update the user state only if Firebase update was successful
+                                    _userState.value = existingUser
+                                }
+                                .addOnFailureListener { e ->
+                                    println("Error updating user: $e")
+                                }
+                        }
+                    }
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    println("Error fetching user: $databaseError")
+                }
+            })
+
+        }
+    }
+}
 
 
 
 @OptIn(DelicateCoroutinesApi::class)
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
-fun GameScreen(
+fun GameScreen2(
     state : GameState,
     modifier: Modifier = Modifier,
     navController: NavHostController
@@ -1406,12 +1534,77 @@ fun GameScreen(
     //StartButton(navController)
     Centre2(navController)
 
-    if (changeIconVisible) {
+    /*if (changeIconVisible) {
     ScrollableColumnWithImages(
-        icons, onClose = {changeIconVisible = false}
+        icons, onClose = {changeIconVisible = false}, viewModel
     )
-    }
+    }*/
 
 
 }
 
+@SuppressLint("CoroutineCreationDuringComposition")
+@Composable
+fun GameScreen(
+    state: GameState,
+    modifier: Modifier = Modifier,
+    navController: NavHostController
+) {
+    val viewModel: GameViewModel = viewModel()
+    val context = LocalContext.current
+    val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+    }
+
+    val username = sharedPreferences.getString("username", "")
+
+    // Déclenchez le chargement de l'utilisateur lors du premier rendu ou lorsque le nom d'utilisateur change
+    LaunchedEffect(username) {
+        viewModel.loadUser(username)
+    }
+
+    val user = viewModel.userState.collectAsState().value
+
+    user?.let { getUser(it) }
+
+    // Gestion des modalités et autres états UI
+    var settingsModalVisible by remember { mutableStateOf(false) }
+    var profilVisible by remember { mutableStateOf(false) }
+    var changeIconVisible by remember { mutableStateOf(false) }
+    var icons by remember {
+        mutableStateOf(listOf(
+            "lightning", "lightning_blue", "lightning_black",
+            "lightning_red", "lightning_green", "lightning_white",
+            "lightning_purple", "lightning_pink"
+        ))
+    }
+
+    // Affichage des fenêtres modales
+    if (settingsModalVisible) {
+        SettingsWindow(onClose = { settingsModalVisible = false }, sharedPreferences, navController)
+    }
+    if (profilVisible) {
+        if (user != null) {
+            ProfilWindow(
+                onClose = { profilVisible = false },
+                user,
+                false,
+                onDisplayIcons = { changeIconVisible = true }
+            )
+        }
+    }
+
+    BackgroundImage()
+    user?.let { Header({ settingsModalVisible = true }, { profilVisible = true }, it) }
+    Logo()
+    // MainGame()
+    // ModeDeJeu()
+    // StartButton(navController)
+    Centre2(navController)
+
+    if (changeIconVisible) {
+        ScrollableColumnWithImages(
+            icons, onClose = { changeIconVisible = false },viewModel
+        )
+    }
+}
