@@ -602,6 +602,7 @@ class MultiViewModel : ViewModel() {
         _gameStarted.value = false
         isUserAddedToWaitingRoom = false
         _gameState.value = "waiting"
+        
 
     }
 
