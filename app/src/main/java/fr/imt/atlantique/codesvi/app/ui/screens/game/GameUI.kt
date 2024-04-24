@@ -3,6 +3,8 @@ package fr.imt.atlantique.codesvi.app.ui.screens.game
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.media.MediaPlayer
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,10 +56,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -65,6 +74,9 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import dagger.hilt.android.internal.Contexts.getApplication
+import fr.imt.atlantique.codesvi.app.data.model.MusicControl
+import fr.imt.atlantique.codesvi.app.data.model.SoundEffect
 import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
@@ -474,6 +486,7 @@ fun StartButton(navController: NavHostController) {
 
 @Composable
 fun StartButton2(navController: NavHostController){
+    val context = LocalContext.current
     Row(verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
         modifier = Modifier
@@ -494,15 +507,31 @@ fun StartButton2(navController: NavHostController){
             .clickable(onClick = {
                 if (currentIndex <= 0) {
                     currentIndex = 0
+                    val soundEffect = MediaPlayer.create(context, R.raw.game_start)
+                    soundEffect.start()
+                    soundEffect.setOnCompletionListener { mp ->
+                        mp.release()
+                    }
                     navController.navigate(HomeRootScreen.Duel.route)
                 }
 
                 if (currentIndex == 1) {
+
+                    val soundEffect = MediaPlayer.create(context, R.raw.game_start)
+                    soundEffect.start()
+                    soundEffect.setOnCompletionListener { mp ->
+                        mp.release()
+                    }
                     navController.navigate(HomeRootScreen.Solo.route)
                 }
 
                 if (currentIndex >= 2) {
                     currentIndex = 2
+                    val soundEffect = MediaPlayer.create(context, R.raw.game_start)
+                    soundEffect.start()
+                    soundEffect.setOnCompletionListener { mp ->
+                        mp.release()
+                    }
                     navController.navigate(HomeRootScreen.Multi.route)
                 }
             })
@@ -1550,10 +1579,18 @@ fun GameScreen(
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+    MusicControl()
     val viewModel: GameViewModel = viewModel()
     val context = LocalContext.current
     val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+    }
+
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
     }
 
     val username = sharedPreferences.getString("username", "")
@@ -1608,3 +1645,4 @@ fun GameScreen(
         )
     }
 }
+

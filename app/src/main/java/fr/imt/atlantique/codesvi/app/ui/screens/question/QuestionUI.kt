@@ -1,6 +1,7 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.question
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
@@ -62,6 +63,7 @@ import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
+import timber.log.Timber
 import java.text.Normalizer
 import java.util.Timer
 import java.util.TimerTask
@@ -850,6 +852,13 @@ fun QuestionScreen(
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
+    }
 
     Background()
     Global(navController)

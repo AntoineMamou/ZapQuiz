@@ -85,6 +85,7 @@ dependencies {
     implementation(libs.hiltnav.compose)
     //implementation(libs.play.services.pal)
     implementation("com.google.android.gms:play-services-pal:20.2.0")
+    implementation(libs.androidx.lifecycle.process)
     kapt(libs.hilt.android.compiler)
 
     // des libreries de database
@@ -118,7 +119,7 @@ dependencies {
     implementation("com.google.firebase:firebase-auth-ktx:21.0.1")
     //implementation("com.google.firebase:firebase-storage-ktx:21.0.1")
 
-
+    implementation("androidx.compose.runtime:runtime-livedata:1.1.1")
 
 
 

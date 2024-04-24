@@ -3,6 +3,7 @@ package fr.imt.atlantique.codesvi.app.ui.screens.shop
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.MusicControl
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
@@ -50,6 +52,7 @@ import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.currentIndex
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
+import timber.log.Timber
 
 
 @Composable
@@ -379,9 +382,17 @@ fun ShopScreen(
     modifier: Modifier = Modifier,
     navController : NavHostController
 ) {
+    MusicControl()
     val context = LocalContext.current
     val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+    }
+
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
     }
 
 

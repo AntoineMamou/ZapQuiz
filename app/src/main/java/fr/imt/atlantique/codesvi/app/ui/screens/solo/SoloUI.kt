@@ -1,4 +1,5 @@
 import android.widget.Button
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,8 +36,7 @@ import androidx.navigation.NavHostController
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.solo.SoloState
-
-
+import timber.log.Timber
 
 
 val customFontFamily = FontFamily(
@@ -309,6 +309,13 @@ fun SoloScreen(
 ) {
     Background()
     BoxesGrid(navController)
+
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
+    }
 
     // pop up box
     var isPopUpVisible by remember { mutableStateOf(false) }

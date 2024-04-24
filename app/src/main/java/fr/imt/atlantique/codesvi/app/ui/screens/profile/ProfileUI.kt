@@ -73,6 +73,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.MusicControl
 import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
@@ -676,6 +677,7 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     navController : NavHostController
 ) {
+    MusicControl()
 
     val tag: String? = "MyAppTag"
     Log.d(tag ?: "DefaultTag", "Bonjour")
@@ -685,6 +687,12 @@ fun ProfileScreen(
         context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
     }
 
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
+    }
 
 
     //Permet de gérer l'affichage ou non de la fenêtre des paramètres
