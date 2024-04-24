@@ -602,7 +602,7 @@ class MultiViewModel : ViewModel() {
         _gameStarted.value = false
         isUserAddedToWaitingRoom = false
         _gameState.value = "waiting"
-        
+
 
     }
 
@@ -723,7 +723,7 @@ fun MultiScreen(
     state: MultiState,
     modifier: Modifier = Modifier,
     navController: NavHostController) {
-
+    println("ok")
     val viewModel : MultiViewModel = viewModel()
     val gameState by viewModel.gameState.collectAsState()
 
