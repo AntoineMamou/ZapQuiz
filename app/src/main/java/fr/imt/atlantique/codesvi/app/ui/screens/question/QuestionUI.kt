@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
@@ -122,7 +123,7 @@ var Reponse by mutableStateOf(true)
 var NombreQuestion = -1
 var NombreDeVies = 3
 
-var QuestionIndexList = mutableStateOf(IntArray(36)  { it }.toMutableList())
+var QuestionIndexList = mutableStateOf(IntArray(10)  { it }.toMutableList())
 // Recuperer la taille de la liste
 
 /*
@@ -293,7 +294,7 @@ fun Horizontalbar(reverse : Boolean, vertical : Boolean ) {
     LaunchedEffect(Unit) {
         while (progress < 1f) {
             delay(10) // Attendre 1 seconde
-            progress += 0.0016f // Augmenter la valeur de remplissage de 0.1 à chaque intervalle
+            progress += 0.001f // Augmenter la valeur de remplissage  à chaque intervalle
         }
     }
 
@@ -319,7 +320,8 @@ fun Horizontalbar(reverse : Boolean, vertical : Boolean ) {
 @Composable
 fun BoutonQCM(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
 
-        Box(
+
+    Box(
             modifier = Modifier
                 .padding(vertical = 15.dp, horizontal = 30.dp)
                 .size(140.dp, 80.dp)
@@ -328,6 +330,7 @@ fun BoutonQCM(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
                 .clickable(onClick = {
                     onClick()
                     Reponse = reponsebonne
+                    ScreenTransitor = true
                 })
 
 
@@ -353,22 +356,84 @@ fun BoutonQCM(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
 ##################################################
 */
 
+var ScreenTransitor = false
+
 @Composable
 fun ChangerQuestion(onClick: () -> Unit) {
-         if (Reponse) {
-            GenererQuestion (onClick)
-             NombreQuestion += 1
-         }else if (!Reponse) {
+    if(ScreenTransitor) {
+        if(Reponse) {
+            TransitorScreen(reponsebonne = true, onClick)
+        } else {
+            TransitorScreen(reponsebonne = false, onClick)
+        }
+    } else {
+        if (Reponse) {
+            GenererQuestion(onClick)
+            NombreQuestion += 1
+        } else if (!Reponse) {
             NombreDeVies = NombreDeVies - 1
-            if (NombreDeVies == 0){
+            if (NombreDeVies == 0) {
 
-            }else {
+            } else {
                 GenererQuestion(onClick)
 
             }
         }
+    }
 
 }
+@Composable
+fun TransitorScreen(reponsebonne: Boolean, onClick: () -> Unit) {
+    var ID = R.drawable.pouce_haut
+    if( reponsebonne == false){
+        ID = R.drawable.pouce_baisee
+    }
+    Column(
+        modifier = Modifier
+            .padding(top = 150.dp)
+            .fillMaxWidth(),
+
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+
+        ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(bottom = 20.dp, end = 10.dp)
+
+        ) {
+            Image(
+                painter = painterResource(id = ID),
+                contentDescription = "fermer", // Indiquez une description si nécessaire
+                modifier = Modifier.size(250.dp) // Ajuster la taille de l'image selon vos besoins
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .size(width = 200.dp, height = 75.dp)
+                .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(20.dp))
+                .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
+                .clickable(onClick = {
+                    onClick()
+                    ScreenTransitor = false
+                })
+
+
+        ) {
+            Text(
+                text = " Question suivante",
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.Center),
+                fontFamily = fontPrincipale
+            )
+        }
+    }
+}
+
 
 @Composable
 fun GenererQuestion(onClick: () -> Unit) {
@@ -391,13 +456,13 @@ fun GenererQuestion(onClick: () -> Unit) {
 suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //rajoute une variable en fonction du type
     return suspendCancellableCoroutine { continuation ->
         val questionsRef = databaseGlobal.getReference("questions/$theme")
+
         val valueEventListener = object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 for (questionSnapshot in dataSnapshot.children) {
                     val questionId = questionSnapshot.key?.toIntOrNull()
                     if (questionId == randomNumber) {
                         //val question = questionSnapshot.getValue(QCM::class.java)
-
 
                         val id = questionSnapshot.child("id").getValue(String::class.java)
                         val type = questionSnapshot.child("type").getValue(String::class.java)
@@ -445,6 +510,42 @@ suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //ra
     }
 }
 
+suspend fun getQuestionCategorySize(theme: String): Int {
+    return suspendCancellableCoroutine { continuation ->
+        val questionsRef = databaseGlobal.getReference("questions/$theme")
+
+        val valueEventListener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                val categorySize = dataSnapshot.childrenCount
+                continuation.resume(categorySize.toInt())
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                continuation.resumeWithException(databaseError.toException())
+            }
+        }
+
+        questionsRef.addListenerForSingleValueEvent(valueEventListener)
+
+        // Annuler l'écouteur de valeurs lorsque la coroutine est annulée
+        continuation.invokeOnCancellation {
+            questionsRef.removeEventListener(valueEventListener)
+        }
+    }
+}
+
+fun RandomCategorie(): String {
+    val categories = listOf(
+        "Histoire", "Géographie", "Musique", "Cinéma","Littérature", "Autres arts",
+        "Sport", "Jeux vidéo", "Sciences"
+    )
+
+    val randomCategoryIndex = (0 until categories.size).random()  // Génère un index aléatoire dans la plage des indices de la liste
+    val randomCategory = removeAccentsAndUpperCase(categories[randomCategoryIndex]) // Récupère la catégorie correspondante à l'index aléatoire
+
+    return randomCategory
+}
+
 
 
 @SuppressLint("CoroutineCreationDuringComposition")
@@ -457,9 +558,17 @@ fun questionGeneration(): QCM? {
 
     LaunchedEffect(randomIndex) {
         QuestionIndexList.value.removeAt(randomIndex)
-        println("QuestionIndexList après suppression: ${QuestionIndexList.value.size}")
-        val question = questionFromDatabase(categorie, randomQuestionIndex)
+        var question : QCM?
+
+        if (categorie != "tout_theme") {
+            question = questionFromDatabase(categorie, randomQuestionIndex)
+
+        } else {
+            val randomcategory = RandomCategorie()
+            question = questionFromDatabase(randomcategory, randomQuestionIndex)
+        }
         qcmState.value = question
+        println(question)
 
     }
 
@@ -482,6 +591,7 @@ fun questionGeneration(): QCM? {
 fun QuestionChoixMultiple(onClick: () -> Unit, qcm: QCM ) {
         val liste = qcm.answers.shuffled()
         val Questiontxt = qcm.question
+
 
         PanneauQuestion(350, 350, Questiontxt)
         Column(
@@ -775,7 +885,16 @@ fun Global(
     navController : NavHostController
 ){
 
+
     var currentContent by remember { mutableStateOf(0) }
+
+    LaunchedEffect(currentContent){
+        if (NombreQuestion == 0) {
+            QuestionIndexList =  mutableStateOf(IntArray(getQuestionCategorySize(categorie))  { it }.toMutableList())
+            println("renitialisation")
+        }
+        println(QuestionIndexList)
+    }
 
     if (gameMode == "Solo") {
         var timer by remember { mutableStateOf(Timer()) }
@@ -808,11 +927,15 @@ fun Global(
                 // Add more cases as needed
             }
 
-            if (time_spend == 1000 || time_spend == 1001){
-                Reponse = false
-                currentContent = 1 - currentContent
 
+            if ((time_spend == 1500 || time_spend == 1501) && ScreenTransitor == false){
+                println("plus de temps")
+                Reponse = false
+                ScreenTransitor = true
+                currentContent = 1 - currentContent
             }
+
+
         ProgressBar(NombreDeVies, NombreQuestion) } else { GameOver(navController)
         currentContent = 2}
 
@@ -829,7 +952,6 @@ fun Global(
             1 -> ChangerQuestion(onClick = { currentContent = 1 - currentContent })
             // Add more cases as needed
         }
-        println(NombreDeVies)
         ProgressBar(NombreDeVies, NombreQuestion)
 
 
@@ -850,6 +972,8 @@ fun QuestionScreen(
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+
+
 
     Background()
     Global(navController)
