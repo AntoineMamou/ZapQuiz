@@ -26,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,23 +42,35 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
-import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
+import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
-import fr.imt.atlantique.codesvi.app.ui.screens.game.currentIndex
+import fr.imt.atlantique.codesvi.app.ui.screens.game.addIconName
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getAnyImageId
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserId
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
+import fr.imt.atlantique.codesvi.app.ui.screens.game.loadIconNames
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
-
+data class IconModel(val iconSourceName: String, val iconName: String, val iconPrice: Int,val iconFunction: (IconModel)->Unit)
 @Composable
 fun IconComponent(
-    iconResourceId: Int,
-    iconName : String,
-    iconPrice : String,
-    iconFunction : (Int) -> Unit
+    icon: IconModel,
+    context: Context
 ){
 
     Column(
@@ -65,12 +78,12 @@ fun IconComponent(
         horizontalAlignment = Alignment.CenterHorizontally,
     ){
         IconButton(
-            onClick = { iconFunction(iconResourceId) },
+            onClick = { icon.iconFunction(icon) },
             modifier = Modifier
                 .size(80.dp),
             content = {
                 Image(
-                    painter = painterResource(id = iconResourceId),
+                    painter = painterResource(id = getAnyImageId(icon.iconSourceName, context)),
                     contentDescription = null,
                     modifier = Modifier
                         .size(80.dp)
@@ -86,7 +99,7 @@ fun IconComponent(
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.width(90.dp)){
             Text(
-                text = iconPrice,
+                text = icon.iconPrice.toString(),
                 color = Color.White,
                 fontSize = 30.sp,
                 fontFamily = customFontFamily
@@ -105,7 +118,7 @@ fun IconComponent(
 }
 
 @Composable
-fun Main(iconList: List<IconModel>) {
+fun Main(iconList: List<IconModel>, context: Context) {
     Column(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -134,9 +147,9 @@ fun Main(iconList: List<IconModel>) {
             IconComponent(iconResourceId = R.drawable.croix_suppr, iconName = "", iconPrice = "900", iconFunction = infoBuyOnClick)
         }*/
 
-        IconList(icons = iconList)
+        IconList(icons = iconList, context)
 
-        Spacer(Modifier.height(30.dp))
+        /*Spacer(Modifier.height(30.dp))
 
 
         Column(
@@ -177,15 +190,16 @@ fun Main(iconList: List<IconModel>) {
             }
 
 
-        }
+        }*/
     }
 }
 
-data class IconModel(val iconResourceId: Int, val iconName: String, val iconPrice: Int,val iconFunction: (Int)->Unit)
+
 
 @SuppressLint("UnrememberedMutableState")
 @Composable
-fun IconList(icons: List<IconModel>) {
+fun IconList(icons: List<IconModel>,
+             context: Context) {
 
     val scrollState = rememberLazyListState()
 
@@ -197,40 +211,29 @@ fun IconList(icons: List<IconModel>) {
 
     }*/
     LazyColumn(
-        verticalArrangement = Arrangement.Top,
+        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
         state = scrollState,
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(400.dp)
             //.padding(top = 210.dp),
     ){
-        items(sortedIcons1.size/2) { index ->
+        val max = if (sortedIcons1.size%2 == 0) sortedIcons1.size/2 else sortedIcons1.size/2 +1
+        items(max) { index ->
             val icone1 = sortedIcons1[index * 2]
             val icone2: IconModel? = sortedIcons1.getOrNull(index * 2 + 1)
-
-            val iconResourceId1 = icone1.iconResourceId
-            val iconName1 = icone1.iconName
-            val iconPrice1 = icone1.iconPrice
-            val iconFunction1 = icone1.iconFunction
-
-
-
 
             Row(verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceAround,
                 modifier = Modifier.fillMaxWidth())
             {
 
-                IconComponent(iconResourceId = iconResourceId1, iconName = iconName1, iconPrice = iconPrice1.toString(), iconFunction = iconFunction1)
+                IconComponent(icone1, context)
 
-                if(icone2 != null) {
-                    val iconResourceId2 = icone2.iconResourceId
-                    val iconName2 = icone2.iconName
-                    val iconPrice2 = icone2.iconPrice
-                    val iconFunction2 = icone2.iconFunction
-                    IconComponent(iconResourceId = iconResourceId2, iconName = iconName2, iconPrice = iconPrice2.toString(), iconFunction = iconFunction2)
-                }
+
+                icone2?.let { IconComponent(it, context) }
+
 
             }
 
@@ -239,10 +242,17 @@ fun IconList(icons: List<IconModel>) {
     }
 
 }
-
+fun isBuyable(icon: IconModel, iconNameList: List<String>): Boolean {
+    return !(iconNameList.contains(icon.iconSourceName)) && user!!.money > icon.iconPrice
+}
 
 @Composable
-fun InfoBuyWindow(onClose: () -> Unit){
+fun InfoBuyWindow(
+    onClose: () -> Unit,
+    icon: IconModel,
+    context: Context,
+    viewModel: GameViewModel
+){
     // La taille de la fenêtre modale des paramètres
     val windowWidth = 350.dp
     val windowHeight = 430.dp
@@ -307,14 +317,14 @@ fun InfoBuyWindow(onClose: () -> Unit){
 
 
                     Image(
-                        painter = painterResource(id = R.drawable.croix_suppr),
+                        painter = painterResource(id = getAnyImageId(icon.iconSourceName, context)),
                         contentDescription = "", // Indiquez une description si nécessaire
                         modifier = Modifier
                             .size(100.dp) // Ajuster la taille de l'image selon vos besoins
                     )
 
                     Text(
-                        text = "Icone numéro 1",
+                        text = icon.iconName,
                         fontSize = 30.sp,
                         fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.game.fontPrincipale,
                         color = colorResource(id = R.color.white),
@@ -327,7 +337,7 @@ fun InfoBuyWindow(onClose: () -> Unit){
                         modifier = Modifier.width(90.dp)
                     ) {
                         Text(
-                            text = "1000",
+                            text = icon.iconPrice.toString(),
                             color = Color.White,
                             fontSize = 30.sp,
                             fontFamily = fontPrincipale
@@ -340,6 +350,7 @@ fun InfoBuyWindow(onClose: () -> Unit){
                                 .size(30.dp)
                         )
                     }
+                    val buyable = isBuyable(icon, loadIconNames(context))
 
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
@@ -348,7 +359,7 @@ fun InfoBuyWindow(onClose: () -> Unit){
                             .height(70.dp)
                             //.padding(bottom = 16.dp)
                             .background(
-                                color = MaterialTheme.colorScheme.secondary,
+                                color = if (buyable) MaterialTheme.colorScheme.secondary else Color.Gray,
                                 RoundedCornerShape(15.dp)
                             )
                             .border(
@@ -357,12 +368,22 @@ fun InfoBuyWindow(onClose: () -> Unit){
                                 RoundedCornerShape(15.dp)
                             )
 
+                            .clickable(enabled = buyable, onClick = {
+                                viewModel.changeAnyAtomicV2(
+                                    money = user!!.money - icon.iconPrice
+                                )
+                                addIconName(context, icon.iconSourceName)
+                                onClose()
+                            })
+
                     ){
                         Text(text = "Acheter",
                             color = Color.White,
                             fontSize = 25.sp,
-                            fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
+                            fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale,
+
                         )
+
                     }
 
 
@@ -373,16 +394,149 @@ fun InfoBuyWindow(onClose: () -> Unit){
 
 }
 
+
+// impossible de l'importer
+
+class GameViewModel : ViewModel() {
+    private val _userState = MutableStateFlow<User?>(null)
+    val userState: StateFlow<User?> = _userState.asStateFlow()
+
+    fun loadUser(username: String?) {
+        viewModelScope.launch {
+            username?.let {
+                val user = getUserInfoDatabase(it)
+                _userState.value = user
+            }
+        }
+    }
+
+
+    fun changeAnyAtomicV2(
+        trophies: Int? = _userState.value?.trophies,
+        playerIcon: String? = _userState.value?.playerIcon,
+        title: String? = _userState.value?.title,
+        connectionState: Boolean? = _userState.value?.connectionState,
+        victory: Int? = _userState.value?.victory,
+        game_played: Int? = _userState.value?.game_played,
+        peak_trophy: Int? = _userState.value?.peak_trophy,
+        favorite_category: String? = _userState.value?.favorite_category,
+        money: Int? = _userState.value?.money
+    ) {
+        getUserId(user!!.username) { userId ->
+            val database =
+                FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+            val usersRef = database.getReference("utilisateurs/$userId")
+
+            usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    var existingUser = dataSnapshot.getValue(User::class.java)
+
+                    if (existingUser != null) {
+                        var isUpdated = false
+
+
+                        if (existingUser.playerIcon != playerIcon) {
+                            if (playerIcon != null) {
+                                existingUser.playerIcon = playerIcon
+                                isUpdated = true
+                            }
+                        }
+
+
+                        if (existingUser.title != title) {
+                            if (title != null) {
+                                existingUser.title = title
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.victory != victory) {
+                            if (victory != null) {
+                                existingUser.victory = victory
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.game_played != game_played) {
+                            if (game_played != null) {
+                                existingUser.game_played = game_played
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.peak_trophy != peak_trophy) {
+                            if (peak_trophy != null) {
+                                existingUser.peak_trophy = peak_trophy
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.favorite_category != favorite_category) {
+                            if (favorite_category != null) {
+                                existingUser.favorite_category = favorite_category
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.money != money) {
+                            if (money != null) {
+                                existingUser.money = money
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.connectionState != connectionState) {
+                            if (connectionState != null) {
+                                existingUser.connectionState = connectionState
+                            }
+                        }
+
+                        if (existingUser.trophies != trophies) {
+                            if (trophies != null) {
+                                existingUser.trophies = trophies
+                            }
+                        }
+
+                        if (isUpdated) {
+                            usersRef.setValue(existingUser)
+                                .addOnSuccessListener {
+                                    // Update the user state only if Firebase update was successful
+                                    _userState.value = existingUser
+                                }
+                                .addOnFailureListener { e ->
+                                    println("Error updating user: $e")
+                                }
+                        }
+                    }
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    println("Error fetching user: $databaseError")
+                }
+            })
+
+        }
+    }
+}
+
+
+
+
+
+
+
 @Composable
 fun ShopScreen(
     state : ShopState,
     modifier: Modifier = Modifier,
     navController : NavHostController
 ) {
+    val viewModel = GameViewModel()
     val context = LocalContext.current
     val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
     }
+
 
 
     //Permet de gérer l'affichage ou non de la fenêtre des paramètres
@@ -406,10 +560,20 @@ fun ShopScreen(
 
     //Permet de gérer l'affichage ou non de la fenêtre de profil
     var infoBuyVisible by remember { mutableStateOf(false) }
+    var iconModelBuyVisible by remember {
+        mutableStateOf(
+            IconModel(
+                iconSourceName = "lightning",
+                iconName = "Default Icon",
+                iconPrice = Int.MAX_VALUE,
+                iconFunction = {}
+            )
+        )
+    }
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (infoBuyVisible) {
-        InfoBuyWindow(onClose = { infoBuyVisible = false })
+        InfoBuyWindow(onClose = { infoBuyVisible = false }, iconModelBuyVisible, context, viewModel )
     }
 
     fr.imt.atlantique.codesvi.app.ui.screens.game.BackgroundImage()
@@ -420,48 +584,34 @@ fun ShopScreen(
     }
 
 
-    val iconList: List<IconModel> = listOf(
-        IconModel(
-            iconResourceId = R.drawable.croix_suppr,
-            iconName = "Icon Name 1",
-            iconPrice = 110,
-            iconFunction = { infoBuyVisible = true }
-        ),
-        IconModel(
-            iconResourceId = R.drawable.croix_suppr,
-            iconName = "Icon Name 2",
-            iconPrice = 320,
-            iconFunction =  { infoBuyVisible = true }
-        ),
-        IconModel(
-            iconResourceId = R.drawable.croix_suppr,
-            iconName = "Icon Name 3",
-            iconPrice = 900,
-            iconFunction = { infoBuyVisible = true }
-        ),
-        IconModel(
-            iconResourceId = R.drawable.croix_suppr,
-            iconName = "Icon Name 4",
-            iconPrice = 110,
-            iconFunction = { infoBuyVisible = true }
-        ),
-        IconModel(
-            iconResourceId = R.drawable.croix_suppr,
-            iconName = "Icon Name 5",
-            iconPrice = 320,
-            iconFunction =  { infoBuyVisible = true }
-        ),
-        IconModel(
-            iconResourceId = R.drawable.croix_suppr,
-            iconName = "Icon Name 6",
-            iconPrice = 900,
-            iconFunction = { infoBuyVisible = true }
-        ),
 
+    // Déclenchez le chargement de l'utilisateur
+   LaunchedEffect(user!!.money) {
+        viewModel.loadUser(user!!.username)
+    }
+
+
+    // Shop database en dur
+    val icon1 = IconModel(
+        iconSourceName = "frog",
+        iconName = "Grenouille sympa",
+        iconPrice = 200,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon2 = IconModel(
+        iconSourceName = "pig",
+        iconName = "Le père du cochonnet",
+        iconPrice = 200,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+
+
+    val iconList: List<IconModel> = listOf(
+        icon1,icon2
         )
 
 
 
-    Main(iconList)
+    Main(iconList, context)
 
 }
