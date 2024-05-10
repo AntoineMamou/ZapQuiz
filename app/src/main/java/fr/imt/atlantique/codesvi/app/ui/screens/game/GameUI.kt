@@ -50,8 +50,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.imt.atlantique.codesvi.app.R
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.Font
@@ -288,11 +290,11 @@ fun ModeDeJeu() {
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var job: Job? = null
-    val itemWidth = 380.dp // Largeur de chaque élément
+    val itemWidth = 390.dp // Largeur de chaque élément
     //REGLER LE PROBLEME POUR ACCEDER A LA TAILLE DE L'ECRAN DU JOUEUR
-    // val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val screenWidth = 400.dp
-    val spacing = (screenWidth - itemWidth) / 2
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    //val screenWidth = 400.dp
+    val spacing = (screenWidth - itemWidth) / 2 + 5.dp
 
 
     LazyRow(
@@ -303,7 +305,7 @@ fun ModeDeJeu() {
         modifier = Modifier
             .fillMaxWidth()
             //.padding(top = 190.dp)
-            .padding(start = spacing)
+            .padding(start = spacing, end = spacing)
             .pointerInput(Unit) {
                 detectDragGestures { change, dragAmount ->
                     change.consume()
@@ -337,8 +339,8 @@ fun ModeDeJeu() {
                 }
             }
     ) {
-        val boxWidth = 390.dp
-        val boxHeight = 250.dp
+        val boxWidth = itemWidth
+        val boxHeight = 230.dp
 
 
 
@@ -349,15 +351,81 @@ fun ModeDeJeu() {
                     .width(boxWidth)
                     .height(boxHeight)
                     .padding(end = 10.dp)
-                    .background(getColorForIndex(index)),
-                content = {
-                    Text(
-                        text = "Box ${index + 1}",
-                        color = Color.White,
-                        modifier = Modifier.align(Alignment.Center)
+                    .background(
+                        color = Color.Transparent,
+                        shape = RoundedCornerShape(15.dp)
                     )
+                    .shadow(
+                        elevation = 10.dp,
+                        shape = RoundedCornerShape(15.dp),
+                        ambientColor= Color.Black,
+                        spotColor = Color.Black,
+
+                    ),
+                content = {
+                    when (index) {
+                        0 -> {
+                            // Load image for index 1
+                            Image(
+                                painter = painterResource(R.drawable.multi_main),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(start = 10.dp, end = 10.dp)
+                                    .background(
+                                        getColorForIndex(index = index),
+                                        RoundedCornerShape(15.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(15.dp)
+                                    )
+                            )
+                        }
+                        1 -> {
+                            // Load image for index 2
+                            Image(
+                                painter = painterResource(R.drawable.solo_main),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(start = 10.dp, end = 10.dp)
+                                    .background(
+                                        getColorForIndex(index = index),
+                                        RoundedCornerShape(15.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(15.dp)
+                                    )
+                            )
+                        }
+                        2 -> {
+                            // Load image for index 3
+                            Image(
+                                painter = painterResource(R.drawable.duel_main),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(start = 10.dp, end = 10.dp)
+                                    .background(
+                                        getColorForIndex(index = index),
+                                        RoundedCornerShape(15.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(15.dp)
+                                    )
+                            )
+                        }
+                    }
                 }
             )
+
+
         }
     }
 
@@ -374,7 +442,7 @@ fun getColorForIndex(index: Int): Color {
     return when (index) {
         0 -> Color.Blue
         1 -> Color.Red
-        else -> Color.Green
+        else -> Color.Blue
     }
 }
 
