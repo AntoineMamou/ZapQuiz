@@ -1,34 +1,23 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.question
 
+
+import GameViewModel
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.painterResource
-import androidx.navigation.NavHostController
-
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-
 import androidx.compose.foundation.layout.Column
-
-
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
@@ -38,6 +27,11 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,22 +40,34 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
-import fr.imt.atlantique.codesvi.app.data.model.QCM
 import fr.imt.atlantique.codesvi.app.data.model.Answer
+import fr.imt.atlantique.codesvi.app.data.model.QCM
+import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserId
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
+import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.text.Normalizer
 import java.util.Timer
@@ -451,7 +457,7 @@ fun GenererQuestion(onClick: () -> Unit) {
 
 
 
-
+// ACCES BD
 
 suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //rajoute une variable en fonction du type
     return suspendCancellableCoroutine { continuation ->
@@ -726,7 +732,8 @@ fun QuestionText(onClick: () -> Unit, qcm : QCM) {
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun GameOver(
-    navController : NavHostController
+    navController : NavHostController,
+    viewModel: GameViewModel
 ) {
     QuestionIndexList = mutableStateOf( IntArray(20)  { it }.toMutableList())
     Column(
@@ -819,7 +826,7 @@ fun GameOver(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "0 coins gagnés",
+                        text = "${NombreQuestion*5} coins gagnés",
                         color = Color.White,
                         fontFamily = fontPrincipale,
                         fontSize = 15.sp,
@@ -849,8 +856,15 @@ fun GameOver(
                     )
                     .clickable(onClick = {
                         navController.navigate(RootScreen.Home.route);
+                        viewModel.changeAnyAtomicV2(
+                            game_played = user!!.game_played + 1,
+                            //multiplicateur de money en fonction de difficulté ??
+                            money = user!!.money + NombreQuestion*5
+                        )
                         NombreQuestion = 0
                         NombreDeVies = 4
+
+
 
                     })
 
@@ -874,6 +888,130 @@ fun GameOver(
     }
 }
 
+
+// IMPOSSIBLE A IMPORTER AAAAAAA
+class GameViewModel : ViewModel() {
+    private val _userState = MutableStateFlow<User?>(null)
+    val userState: StateFlow<User?> = _userState.asStateFlow()
+
+    fun loadUser(username: String?) {
+        viewModelScope.launch {
+            username?.let {
+                val user = getUserInfoDatabase(it)
+                _userState.value = user
+            }
+        }
+    }
+
+
+    fun changeAnyAtomicV2(
+        trophies: Int? = _userState.value?.trophies,
+        playerIcon: String? = _userState.value?.playerIcon,
+        title: String? = _userState.value?.title,
+        connectionState: Boolean? = _userState.value?.connectionState,
+        victory: Int? = _userState.value?.victory,
+        game_played: Int? = _userState.value?.game_played,
+        peak_trophy: Int? = _userState.value?.peak_trophy,
+        favorite_category: String? = _userState.value?.favorite_category,
+        money: Int? = _userState.value?.money
+    ) {
+        getUserId(user!!.username) { userId ->
+            val database =
+                FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+            val usersRef = database.getReference("utilisateurs/$userId")
+
+            usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    var existingUser = dataSnapshot.getValue(User::class.java)
+
+                    if (existingUser != null) {
+                        var isUpdated = false
+
+
+                        if (existingUser.playerIcon != playerIcon) {
+                            if (playerIcon != null) {
+                                existingUser.playerIcon = playerIcon
+                                isUpdated = true
+                            }
+                        }
+
+
+                        if (existingUser.title != title) {
+                            if (title != null) {
+                                existingUser.title = title
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.victory != victory) {
+                            if (victory != null) {
+                                existingUser.victory = victory
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.game_played != game_played) {
+                            if (game_played != null) {
+                                existingUser.game_played = game_played
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.peak_trophy != peak_trophy) {
+                            if (peak_trophy != null) {
+                                existingUser.peak_trophy = peak_trophy
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.favorite_category != favorite_category) {
+                            if (favorite_category != null) {
+                                existingUser.favorite_category = favorite_category
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.money != money) {
+                            if (money != null) {
+                                existingUser.money = money
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.connectionState != connectionState) {
+                            if (connectionState != null) {
+                                existingUser.connectionState = connectionState
+                            }
+                        }
+
+                        if (existingUser.trophies != trophies) {
+                            if (trophies != null) {
+                                existingUser.trophies = trophies
+                            }
+                        }
+
+                        if (isUpdated) {
+                            usersRef.setValue(existingUser)
+                                .addOnSuccessListener {
+                                    // Update the user state only if Firebase update was successful
+                                    _userState.value = existingUser
+                                }
+                                .addOnFailureListener { e ->
+                                    println("Error updating user: $e")
+                                }
+                        }
+                    }
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    println("Error fetching user: $databaseError")
+                }
+            })
+
+        }
+    }
+}
+
 /*
 ##################################################
 #                 MODE DE JEU                    #
@@ -882,7 +1020,8 @@ fun GameOver(
 
 @Composable
 fun Global(
-    navController : NavHostController
+    navController : NavHostController,
+    viewModel: GameViewModel
 ){
 
 
@@ -936,7 +1075,7 @@ fun Global(
             }
 
 
-        ProgressBar(NombreDeVies, NombreQuestion) } else { GameOver(navController)
+        ProgressBar(NombreDeVies, NombreQuestion) } else { GameOver(navController, viewModel)
         currentContent = 2}
 
 
@@ -968,15 +1107,18 @@ fun Global(
 
 @Composable
 fun QuestionScreen(
-    state : QuestionState,
+    state: QuestionState,
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+    val viewModel = GameViewModel()
+    val userState by viewModel.userState.collectAsState()
+
 
 
 
     Background()
-    Global(navController)
+    Global(navController, viewModel)
 
 
 }

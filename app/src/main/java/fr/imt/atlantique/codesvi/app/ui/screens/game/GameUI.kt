@@ -10,11 +10,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-
 import androidx.compose.foundation.layout.Column
-
 import androidx.compose.foundation.layout.Row
-
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,23 +38,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import fr.imt.atlantique.codesvi.app.R
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -67,10 +62,10 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -358,10 +353,10 @@ fun ModeDeJeu() {
                     .shadow(
                         elevation = 10.dp,
                         shape = RoundedCornerShape(15.dp),
-                        ambientColor= Color.Black,
+                        ambientColor = Color.Black,
                         spotColor = Color.Black,
 
-                    ),
+                        ),
                 content = {
                     when (index) {
                         0 -> {
@@ -849,7 +844,7 @@ fun GridProfilComponent(user : User){
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ProfilComponent(textTitre = "Victoires", textResultat = user.victory.toString() )
+            ProfilComponent(textTitre = "Victoires Royales", textResultat = user.victory.toString() )
             Spacer(modifier = Modifier.height(16.dp))
             ProfilComponent(textTitre = "Meilleurs Trophées", textResultat =user.peak_trophy.toString())
         }
@@ -1043,112 +1038,7 @@ fun removeFriendRequest(userId: String, newUserName: String) {
     })
 }
 
-fun changeAnyAtomic(
-    trophies: Int = user!!.trophies,
-    playerIcon: String = user!!.playerIcon,
-    title: String = user!!.title,
-    connectionState: Boolean = user!!.connectionState,
-    victory: Int = user!!.victory,
-    game_played: Int = user!!.game_played,
-    peak_trophy: Int = user!!.peak_trophy,
-    favorite_category: String = user!!.favorite_category,
-    money: Int = user!!.money
-    ) {
-    getUserId(user!!.username) { userId ->
-        val database =
-            FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
-        val usersRef = database.getReference("utilisateurs/$userId")
 
-        // Fetch the existing user's data
-        usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                var existingUser = dataSnapshot.getValue(User::class.java)
-
-                if (existingUser != null) {
-                    // Check if newUser.username is in the friendsRequest list
-                    if (existingUser.trophies != trophies) {
-
-                        existingUser.trophies = trophies
-                        usersRef.setValue(existingUser)
-                            .addOnFailureListener { e ->
-                                println("Error changing atomic data: $e")
-                            }
-                    }
-                    if (existingUser.playerIcon != playerIcon) {
-
-                        existingUser.playerIcon = playerIcon
-                        usersRef.setValue(existingUser)
-                            .addOnFailureListener { e ->
-                                println("Error changing atomic data: $e")
-                            }
-                    }
-                    if (existingUser.title != title) {
-
-                        existingUser.title = title
-                        usersRef.setValue(existingUser)
-                            .addOnFailureListener { e ->
-                                println("Error changing atomic data: $e")
-                            }
-                    }
-                    if (existingUser.victory != victory) {
-
-                        existingUser.victory = victory
-                        usersRef.setValue(existingUser)
-                            .addOnFailureListener { e ->
-                                println("Error changing atomic data: $e")
-                            }
-                    }
-                    if (existingUser.game_played != game_played) {
-
-                        existingUser.game_played = game_played
-                        usersRef.setValue(existingUser)
-                            .addOnFailureListener { e ->
-                                println("Error changing atomic data: $e")
-                            }
-                    }
-                    if (existingUser.peak_trophy != peak_trophy) {
-
-                        existingUser.peak_trophy = peak_trophy
-                        usersRef.setValue(existingUser)
-                            .addOnFailureListener { e ->
-                                println("Error changing atomic data: $e")
-                            }
-                    }
-                    if (existingUser.favorite_category != favorite_category) {
-
-                        existingUser.favorite_category = favorite_category
-                        usersRef.setValue(existingUser)
-                            .addOnFailureListener { e ->
-                                println("Error changing atomic data: $e")
-                            }
-                    }
-                    if (existingUser.money != money) {
-
-                        existingUser.money = money
-                        usersRef.setValue(existingUser)
-                            .addOnFailureListener { e ->
-                                println("Error changing atomic data: $e")
-                            }
-                    }
-                    if (existingUser.connectionState != connectionState) {
-
-                        existingUser.connectionState = connectionState
-                        usersRef.setValue(existingUser)
-                            .addOnFailureListener { e ->
-                                println("Error changing atomic data: $e")
-                            }
-                    }
-                } else {
-                    println("User not found")
-                }
-            }
-
-            override fun onCancelled(databaseError: DatabaseError) {
-                println("Error fetching user: $databaseError")
-            }
-        })
-    }
-}
 
 @Composable
 fun ScrollableColumnWithImages(
@@ -1419,7 +1309,7 @@ class GameViewModel : ViewModel() {
     }
 
 
-    fun changeAnyAtomicV2(
+ fun changeAnyAtomicV2(
         trophies: Int? = _userState.value?.trophies,
         playerIcon: String? = _userState.value?.playerIcon,
         title: String? = _userState.value?.title,
@@ -1527,89 +1417,46 @@ class GameViewModel : ViewModel() {
     }
 }
 
+fun getSharedPreferences(context: Context): SharedPreferences {
+    return context.getSharedPreferences("IconNames", Context.MODE_PRIVATE)
+}
 
-
-@OptIn(DelicateCoroutinesApi::class)
-@SuppressLint("CoroutineCreationDuringComposition")
-@Composable
-fun GameScreen2(
-    state : GameState,
-    modifier: Modifier = Modifier,
-    navController: NavHostController
-) {
-    val context = LocalContext.current
-    val sharedPreferences: SharedPreferences by lazy {
-        context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
-    }
-
-    val username = sharedPreferences.getString("username", "")
-
-    val userState = remember {
-        mutableStateOf<User?>(null)
-    }
-    LaunchedEffect(userState) {
-        val user = username?.let { getUserInfoDatabase(it) }
-        userState.value = user
-    }
-
-    userState.value?.let { getUser(it) }
-
-
-    //Permet de gérer l'affichage ou non de la fenêtre des paramètres
-    var settingsModalVisible by remember { mutableStateOf(false) }
-
-    // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
-    if (settingsModalVisible) {
-
-        SettingsWindow(onClose = { settingsModalVisible = false }, sharedPreferences, navController)
-    }
-
-
-    var changeIconVisible by remember { mutableStateOf(false) }
-    var icons by remember {
-        mutableStateOf(listOf(
+// Function to load icon names from SharedPreferences, initializes if nothing is saved
+fun loadIconNames(context: Context): List<String> {
+    val sharedPreferences = getSharedPreferences(context)
+    return sharedPreferences.getStringSet("iconNames", null)?.toList()
+        ?: listOf(
             "lightning", "lightning_blue", "lightning_black",
             "lightning_red", "lightning_green", "lightning_white",
-            "lightning_purple","lightning_pink"
-        ))
-    }
-
-
-
-
-    //Permet de gérer l'affichage ou non de la fenêtre de profil
-    var profilVisible by remember { mutableStateOf(false) }
-
-    // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
-    if (profilVisible) {
-        userState.value?.let {
-            ProfilWindow(
-                onClose = { profilVisible = false },
-                it,
-                false,
-                onDisplayIcons = { changeIconVisible = true })
-        }
-    }
-
-
-
-
-    BackgroundImage()
-    userState.value?.let { Header({ settingsModalVisible = true }, { profilVisible = true }, it) }
-    Logo()
-    //MainGame()
-    //ModeDeJeu()
-    //StartButton(navController)
-    Centre2(navController)
-
-    /*if (changeIconVisible) {
-    ScrollableColumnWithImages(
-        icons, onClose = {changeIconVisible = false}, viewModel
-    )
-    }*/
-
-
+            "lightning_purple", "lightning_pink"
+        )
 }
+
+fun addIconName(context: Context, iconName: String) {
+    val sharedPreferences = getSharedPreferences(context)
+    val iconNames = sharedPreferences.getStringSet("iconNames", mutableSetOf())?.toMutableSet()
+        ?: mutableSetOf()
+
+    iconNames.add(iconName)
+
+    val editor = getSharedPreferences(context).edit()
+    editor.putStringSet("iconNames", iconNames)
+    editor.apply()
+}
+
+fun removeIconName(context: Context, iconName: String) {
+    val sharedPreferences = getSharedPreferences(context)
+    val iconNames = sharedPreferences.getStringSet("iconNames", mutableSetOf())?.toMutableSet()
+        ?: mutableSetOf()
+
+    iconNames.remove(iconName)
+
+    val editor = getSharedPreferences(context).edit()
+    editor.putStringSet("iconNames", iconNames)
+    editor.apply()
+}
+
+
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
@@ -1624,28 +1471,29 @@ fun GameScreen(
         context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
     }
 
+    val userState by viewModel.userState.collectAsState()
     val username = sharedPreferences.getString("username", "")
 
-    // Déclenchez le chargement de l'utilisateur lors du premier rendu ou lorsque le nom d'utilisateur change
-    LaunchedEffect(username) {
+    // Déclenchez le chargement de l'utilisateur
+    LaunchedEffect(userState?.username, userState?.money) {
         viewModel.loadUser(username)
     }
 
-    val user = viewModel.userState.collectAsState().value
 
-    user?.let { getUser(it) }
+
+
+
+    userState?.let { getUser(it) }
+    println(user)
+
 
     // Gestion des modalités et autres états UI
     var settingsModalVisible by remember { mutableStateOf(false) }
     var profilVisible by remember { mutableStateOf(false) }
     var changeIconVisible by remember { mutableStateOf(false) }
-    var icons by remember {
-        mutableStateOf(listOf(
-            "lightning", "lightning_blue", "lightning_black",
-            "lightning_red", "lightning_green", "lightning_white",
-            "lightning_purple", "lightning_pink"
-        ))
-    }
+    var icons = loadIconNames(context)
+    //removeIconName(context, "pig")
+    println(icons)
 
     // Affichage des fenêtres modales
     if (settingsModalVisible) {
@@ -1655,7 +1503,7 @@ fun GameScreen(
         if (user != null) {
             ProfilWindow(
                 onClose = { profilVisible = false },
-                user,
+                user!!,
                 false,
                 onDisplayIcons = { changeIconVisible = true }
             )

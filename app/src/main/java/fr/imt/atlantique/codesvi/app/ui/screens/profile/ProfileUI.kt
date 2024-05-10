@@ -26,7 +26,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -48,11 +47,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -74,10 +71,8 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.User
-import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
-import fr.imt.atlantique.codesvi.app.ui.screens.game.addFriendRequest
 import fr.imt.atlantique.codesvi.app.ui.screens.game.addFriendfromId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
@@ -88,11 +83,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import kotlin.math.max
 import kotlin.math.min
 
 val fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
@@ -364,10 +357,10 @@ fun PopupWindow(
                 .fillMaxWidth(0.8f)
                 .height(400.dp)
                 .align(Alignment.Center)
-                .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(15.dp))
+                .background(colorResource(id = R.color.blue_2), RoundedCornerShape(15.dp))
                 .border(
                     width = 8.dp,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color.Black,
                     shape = RoundedCornerShape(15.dp)
                 )
         ) {
@@ -375,7 +368,7 @@ fun PopupWindow(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        color = MaterialTheme.colorScheme.secondary,
+                        colorResource(id = R.color.blue_2),
                         RoundedCornerShape(15.dp)
                     )
                     .padding(16.dp)
@@ -406,11 +399,11 @@ fun PopupWindow(
                         .height(10.dp)
                         .border(
                             1.dp,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = MaterialTheme.colorScheme.secondary,
                             RoundedCornerShape(2.dp)
                         ),
                     thickness = 5.dp,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.secondary
 
                 )
 
@@ -460,9 +453,8 @@ fun PopupWindow(
                                     modifier = Modifier.padding(start = 8.dp)
                                 ) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.croix_suppr),
-                                        contentDescription = "Accept",
-                                        tint = Color.Green
+                                        painter = painterResource(id = R.drawable.tick),
+                                        contentDescription = "Accept"
                                     )
                                 }
                                 IconButton(
@@ -475,9 +467,8 @@ fun PopupWindow(
                                     modifier = Modifier.padding(start = 8.dp)
                                 ) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.croix_suppr),
-                                        contentDescription = "Remove",
-                                        tint = Color.Red
+                                        painter = painterResource(id = R.drawable.cross),
+                                        contentDescription = "Remove"
                                     )
                                 }
                             }
