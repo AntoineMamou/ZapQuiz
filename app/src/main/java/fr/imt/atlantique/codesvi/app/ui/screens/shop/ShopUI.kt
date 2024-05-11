@@ -604,10 +604,40 @@ fun ShopScreen(
         iconPrice = 200,
         iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
     )
+    val icon3 = IconModel(
+        iconSourceName = "duck",
+        iconName = "Donald",
+        iconPrice = 400,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon4 = IconModel(
+        iconSourceName = "bull",
+        iconName = "Chicagoen",
+        iconPrice = 400,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon5 = IconModel(
+        iconSourceName = "panda",
+        iconName = "\"On s'fait un bambou ?\"",
+        iconPrice = 1000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon6 = IconModel(
+        iconSourceName = "dragon",
+        iconName = "\"J'suis en feu !\"",
+        iconPrice = 1000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon7 = IconModel(
+        iconSourceName = "logo",
+        iconName = "Zzzzzap Quiz",
+        iconPrice = 3000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
 
 
     val iconList: List<IconModel> = listOf(
-        icon1,icon2
+        icon1, icon2, icon3, icon4, icon5, icon6, icon7
         )
 
 
