@@ -1061,10 +1061,10 @@ fun ScrollableColumnWithImages(
                 .fillMaxWidth(0.8F)
                 .height(200.dp)
                 .align(Alignment.Center)
-                .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(15.dp))
+                .background(colorResource(id = R.color.blue_2), RoundedCornerShape(15.dp))
                 .border(
-                    width = 8.dp,
-                    color = MaterialTheme.colorScheme.primary,
+                    width = 4.dp,
+                    color = Color.Black,
                     shape = RoundedCornerShape(15.dp)
                 )
         ) {
@@ -1072,7 +1072,7 @@ fun ScrollableColumnWithImages(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
-                        color = MaterialTheme.colorScheme.secondary,
+                        colorResource(id = R.color.blue_2),
                         RoundedCornerShape(15.dp)
                     )
                     .padding(16.dp),
