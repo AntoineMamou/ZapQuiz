@@ -75,7 +75,9 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import dagger.hilt.android.internal.Contexts.getApplication
+import fr.imt.atlantique.codesvi.app.data.model.Answer
 import fr.imt.atlantique.codesvi.app.data.model.MusicControl
+import fr.imt.atlantique.codesvi.app.data.model.QCM
 import fr.imt.atlantique.codesvi.app.data.model.SoundEffect
 import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
@@ -1579,6 +1581,9 @@ fun GameScreen(
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+
+
+
     MusicControl()
     val viewModel: GameViewModel = viewModel()
     val context = LocalContext.current

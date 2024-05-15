@@ -3,7 +3,8 @@ package fr.imt.atlantique.codesvi.app.ui.screens.multi
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
-import android.util.Log
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.LiveData
@@ -49,8 +51,13 @@ import androidx.navigation.NavHostController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.MutableData
+import com.google.firebase.database.ServerValue
+import com.google.firebase.database.Transaction
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.snapshots
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.Answer
 import fr.imt.atlantique.codesvi.app.data.model.Game
 import fr.imt.atlantique.codesvi.app.data.model.Player
 import fr.imt.atlantique.codesvi.app.data.model.QCM
@@ -58,7 +65,6 @@ import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
-import fr.imt.atlantique.codesvi.app.ui.screens.question.Background
 import fr.imt.atlantique.codesvi.app.ui.screens.question.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -240,176 +246,6 @@ fun Home(users: List<User>) {
     }
 }
 
-class MultiViewModel2 : ViewModel() {
-    private val _gameState = MutableStateFlow("waiting")  // Initial state
-    val gameState: StateFlow<String> = _gameState.asStateFlow()
-
-
-    private val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
-    private val waitingRoomRef = database.getReference("waiting_room")
-
-
-    private val _userState = MutableStateFlow<User?>(null)
-    val userState: StateFlow<User?> = _userState.asStateFlow()
-
-    private var isUserAddedToWaitingRoom = false
-
-    private val _gameId = MutableStateFlow<String?>(null)
-    val gameId: StateFlow<String?> = _gameId.asStateFlow()
-
-    private val _gameStarted = MutableStateFlow(false) // État initial de la partie
-
-
-    /*init {
-        checkWaitingRoom()
-    }*/
-
-    fun loadUser(username: String?) {
-        viewModelScope.launch {
-            username?.let {
-                val user = getUserInfoDatabase(it)
-                _userState.value = user
-            }
-        }
-    }
-
-
-    fun startNewGame(players: List<User>) {
-        val gameIdValue = waitingRoomRef.push().key ?: return
-        _gameId.value = gameIdValue
-        val gamePlayers = players.map { Player(it, 0) }
-        val initialRound = 1
-        val questions = generateQuestions()
-
-        val newGame = Game(gameIdValue, gamePlayers, initialRound, questions, gameState = "waiting")
-        val gameRef = database.getReference("games").child(gameIdValue)
-
-            gameRef.setValue(newGame)
-                .addOnSuccessListener {
-                    println("New game started successfully with ID $gameIdValue")
-                    gameRef.child("gameState")
-                        .setValue("startGame")  // Mise à jour de l'état du jeu dans Firebase
-                    broadcastGameStarted(gameIdValue)
-
-                }
-                .addOnFailureListener {
-                    println("Failed to start new game")
-                }
-
-    }
-
-    private fun broadcastGameStarted(gameId: String) {
-            waitingRoomRef.child("gameStarted").setValue(true)
-            waitingRoomRef.child("gameId").setValue(gameId)
-    }
-
-    fun listenForGameStart() {
-        waitingRoomRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val gameStarted = snapshot.child("gameStarted").getValue(Boolean::class.java) ?: false
-                if (gameStarted) {
-                    val gameId = snapshot.child("gameId").getValue(String::class.java)
-                    if (gameId != null) {
-                        _gameId.value = gameId  // Sauvegarde l'ID de la partie pour tous les joueurs
-                        _gameState.value = "startGame"
-                        waitingRoomRef.removeValue()
-                    }
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Timber.e("Failed to read game start info: ${error.message}")
-            }
-        })
-    }
-
-    private fun generateQuestions(): List<QCM> {
-        // Implémentez la logique pour générer ou sélectionner des questions
-        return listOf(
-
-        )
-    }
-
-    private var waitingRoomListener: ValueEventListener? = null
-
-    private fun checkWaitingRoom() {
-        // Assurez-vous qu'il n'y a pas déjà un listener actif
-        waitingRoomListener?.let {
-            waitingRoomRef.removeEventListener(it)
-        }
-
-        waitingRoomListener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val users = snapshot.child("user").children.mapNotNull { it.getValue(User::class.java) }
-                if (users.size == 2 && !_gameStarted.value) { // Vérifier si le joueur actuel est le deuxième à rejoindre
-                    if (isUserAddedToWaitingRoom && !snapshot.hasChild("gameStarted")) {
-                        // Vérifier si le jeu n'a pas déjà été démarré par un autre joueur
-                        startNewGame(users)
-                        waitingRoomRef.child("gameStarted").setValue(true)
-                        waitingRoomRef.child("gameId").setValue(_gameId.value)
-                        _gameState.value = "startGame"
-                        _gameStarted.value = true
-                        stopListeningToWaitingRoom()
-                    }
-
-                    // Supprimer le listener après l'utilisation
-                    waitingRoomListener?.let { listener ->
-                        waitingRoomRef.removeEventListener(listener)
-                        waitingRoomListener = null
-                    }
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Timber.e("Error reading waiting room: ${error.message}")
-            }
-        }.also { listener ->
-            waitingRoomRef.addValueEventListener(listener)
-        }
-    }
-
-    fun stopListeningToWaitingRoom() {
-        // Méthode pour arrêter manuellement d'écouter la salle d'attente
-        waitingRoomListener?.let {
-            waitingRoomRef.removeEventListener(it)
-            waitingRoomListener = null
-        }
-    }
-
-    fun addUserToWaitingRoom(user: User) {
-        println(isUserAddedToWaitingRoom)
-        if (!isUserAddedToWaitingRoom && !_gameStarted.value) {
-            val key = waitingRoomRef.child("user").push().key
-            if (key != null) {
-                waitingRoomRef.child("user").child(key).setValue(user)
-                    .addOnSuccessListener {
-                        println("User added to waiting room successfully")
-                        isUserAddedToWaitingRoom = true
-                        checkWaitingRoom()
-                        listenForGameStart()
-
-                    }
-                    .addOnFailureListener {
-                        println("Failed to add user to waiting room")
-                    }
-            }
-        } else {
-            println("User already added to the waiting room or game has started")
-        }
-    }
-
-
-    fun resetGame() {
-        _gameStarted.value = false
-        isUserAddedToWaitingRoom = false
-        _gameState.value = "waiting"
-
-    }
-
-
-
-}
-
 
 class MultiViewModel : ViewModel() {
     private val _gameState = MutableStateFlow("waiting")  // Initial state
@@ -451,7 +287,7 @@ class MultiViewModel : ViewModel() {
         val gamePlayers = players.map { Player(it, 0) }
         val initialRound = 1
         val questions = generateQuestions()
-
+        println(questions)
         val newGame = Game(gameIdValue, gamePlayers, initialRound, questions, gameState = "waiting")
         val gameRef = database.getReference("games").child(gameIdValue)
 
@@ -497,7 +333,15 @@ class MultiViewModel : ViewModel() {
     private fun generateQuestions(): List<QCM> {
         // Implémentez la logique pour générer ou sélectionner des questions
         return listOf(
+            QCM(answers=listOf(Answer(isRight=true, answer="Qin Shi Huang"), Answer(isRight=false, answer="Qin Shi Huangdi"), Answer(isRight=false, answer="Liu Bang"), Answer(isRight=false, answer="Han Wudi")), id="histoire_17", type="qcm_4", category="histoire", level=5, question="Qui était le premier empereur de Chine ?", image="", gap=0F, explanation=""),
 
+        QCM(answers=listOf(Answer(isRight=true, answer="Louis-Napoléon Bonaparte"), Answer(isRight=false, answer="Adolphe Thiers"), Answer(isRight=false, answer="Jules Grévy"), Answer(isRight=false, answer="Louis-Philippe")), id="histoire_34", type="qcm_4", category="histoire", level=4, question="Qui a été élu président de la République française lors de la première élection présidentielle en 1848 ?", image="", gap=0F, explanation=""),
+
+        QCM(answers=listOf(Answer(isRight=false, answer="Auguste"), Answer(isRight=false, answer="Néron"), Answer(isRight=true, answer="Vespasien"), Answer(isRight=false, answer="Trajan")), id="histoire_2", type="qcm_4", category="histoire", level=4, question="Quel empereur romain a ordonné la construction du Colisée ?", image="", gap=0F, explanation=""),
+
+        QCM(answers=listOf(Answer(isRight=true, answer="États-Unis"), Answer(isRight=false, answer="Canada"), Answer(isRight=false, answer="Australie"), Answer(isRight=false, answer="Argentine")), id="geographie_17", type="qcm_4", category="géographie", level=2, question="Dans quel pays se trouve le parc national de Yellowstone ?", image="", gap=0F, explanation=""),
+
+        QCM(answers=listOf(Answer(isRight=false, answer="Lac Supérieur"), Answer(isRight=false, answer="Lac Victoria"), Answer(isRight=true, answer="Lac Baïkal"), Answer(isRight=false, answer="Lac Tanganyika")), id="geographie_19", type="qcm_4", category="géographie", level=5, question="Quel est le plus grand lac du monde en volume d'eau ?", image="", gap=0F, explanation="")
         )
     }
 
@@ -558,18 +402,20 @@ class MultiViewModel : ViewModel() {
     fun addUserToWaitingRoom(user:User) {
         println(isUserAddedToWaitingRoom)
         if (!isUserAddedToWaitingRoom && !_gameStarted.value) {
+            isUserAddedToWaitingRoom = true
             val key = waitingRoomRef.child("user").push().key
             if (key != null) {
                 waitingRoomRef.child("user").child(key).setValue(user)
                     .addOnSuccessListener {
+
                         println("User added to waiting room successfully")
-                        isUserAddedToWaitingRoom = true
                         checkWaitingRoom()
                         //listenForGameStart()
 
                     }
                     .addOnFailureListener {
                         println("Failed to add user to waiting room")
+                        isUserAddedToWaitingRoom = false
                     }
             }
         } else {
@@ -610,35 +456,6 @@ class MultiViewModel : ViewModel() {
 
 }
 
-@Composable
-fun MultiScreen2(
-    state: MultiState,
-    modifier: Modifier = Modifier,
-    navController: NavHostController
-) {
-
-    val context = LocalContext.current
-
-    Background()
-
-    val user1 = User("Antoine", "password", 1000, "lightning", "Zappeur professionnel", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
-    val user2 = User("Loic", "password", 420, "lightning", "Zappeur débutant", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
-    val user3 = User("Titouan", "password", 4000, "lightning", "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
-    val user4 = User("Alexia", "password", 3000, "lightning", "Zappeur intermediaire", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
-    val user5 = User("Julien", "password", 600, "lightning", "Zappeur au top", true, listOf(), 0, 0, 1000, "Histoire", 100, listOf())
-    
-    //Home(listOf(user1, user2, user3,user4,user5))
-
-    val pair1: Pair<User, Int> = Pair(user1, 10)
-    val pair2: Pair<User, Int> = Pair(user2, 20)
-    val pair3: Pair<User, Int> = Pair(user3, 190)
-    val pair4: Pair<User, Int> = Pair(user4, 3)
-    val pair5: Pair<User, Int> = Pair(user5, 0)
-
-    ScreenChanger(usersScores= listOf(pair1,pair2,pair3,pair4,pair5),"nextRound","Home",navController)
-}
-
-
 class InGameViewModel() : ViewModel() {
     private val db = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
 
@@ -647,6 +464,13 @@ class InGameViewModel() : ViewModel() {
 
     private val _questions = MutableLiveData<List<QCM>>()
     val questions: LiveData<List<QCM>> = _questions
+
+    private val _round = MutableLiveData<Int>()
+    val round: LiveData<Int> = _round
+
+    val displayFunction = MutableStateFlow(false)
+
+    private var alreadyAnswered = false
 
     fun fetchPlayers(gameId: String) {
         val gameRef = db.getReference("games/$gameId")
@@ -664,7 +488,29 @@ class InGameViewModel() : ViewModel() {
         })
     }
 
-    fun fetchQuestions(gameId: String) {
+    fun fetchRound(gameId: String){
+        val gameRef = db.getReference("games").child(gameId).child("round")
+        gameRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val currentRound = snapshot.getValue(Int::class.java)
+                if (currentRound != null) {
+                    _round.postValue(currentRound!!)
+                } else {
+                    _round.postValue(1) // Définir une valeur par défaut si rien n'est trouvé
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Timber.e("Error fetching game round: ${error.message}")
+            }
+        })
+    }
+
+    fun fetchAnswers(gameId: String){
+        //need to fetch the answers because isRight doesn't exist, it's right in the DataBase
+    }
+
+    fun fetchQuestions2(gameId: String) {
         val questionsRef = db.getReference("games/$gameId/questions")
         questionsRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -682,36 +528,230 @@ class InGameViewModel() : ViewModel() {
         })
     }
 
-    fun submitAnswer(gameId: String, userId: String, answer: String) {
-        val gameRef = db.getReference("games/$gameId")
-        val userRef = gameRef.child("players").child(userId)
-        val questionsRef = gameRef.child("questions")
+    fun fetchQuestions(gameId: String){
+        val questionsRef = db.getReference("games/$gameId/questions")
+        questionsRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                val fetchedQuestions = mutableListOf<QCM>()
+                for (questionSnapshot in dataSnapshot.children) {
 
-        _questions.value?.let { questions ->
-            // Fetch the current question based on your app logic (assuming the first question for simplicity)
-            val currentQuestion = questions.firstOrNull()
-            currentQuestion?.let { question ->
-                // Check if the provided answer is correct
-                val correctAnswer = question.answers.firstOrNull { it.answer == answer && it.isRight }
+                        val id = questionSnapshot.child("id").getValue(String::class.java)
+                        val type = questionSnapshot.child("type").getValue(String::class.java)
+                        val category =
+                            questionSnapshot.child("category").getValue(String::class.java)
+                        val level = questionSnapshot.child("level").getValue(Int::class.java)
+                        val question2 =
+                            questionSnapshot.child("question").getValue(String::class.java)
+                        val image = questionSnapshot.child("image").getValue(String::class.java)
+                        val gap = questionSnapshot.child("gap").getValue(Float::class.java)
+                        val explanation =
+                            questionSnapshot.child("explanation").getValue(String::class.java)
 
-                if (correctAnswer != null) {
-                    // If the answer is correct, update the score
-                    userRef.child("score").addListenerForSingleValueEvent(object : ValueEventListener {
-                        override fun onDataChange(snapshot: DataSnapshot) {
-                            val currentScore = snapshot.getValue(Int::class.java) ?: 0
-                            userRef.child("score").setValue(currentScore + 1)
+                        // Récupération de la liste des réponses
+                        val answersList = ArrayList<Answer>()
+                        val answersSnapshot = questionSnapshot.child("answers")
+                        for (answerSnapshot in answersSnapshot.children) {
+                            val answer = answerSnapshot.child("answer").getValue(String::class.java)
+                            val isRight =
+                                answerSnapshot.child("right").getValue(Boolean::class.java)
+                            if (answer != null && isRight != null) {
+                                val reponse = Answer(isRight, answer)
+                                answersList.add(reponse)
+
+                            }
                         }
 
-                        override fun onCancelled(error: DatabaseError) {
-                            Log.e("InGameViewModel", "Failed to update score: ${error.message}")
-                        }
-                    })
+                        // Création de l'objet QCM avec les données récupérées
+                        val question = QCM(
+                            answersList,
+                            id ?: "",
+                            type ?: "",
+                            category ?: "",
+                            level ?: 0,
+                            question2 ?: "",
+                            image ?: "",
+                            gap ?: 0F,
+                            explanation ?: ""
+                        )
+                    fetchedQuestions.add(question)
+                }
+                _questions.value = fetchedQuestions
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                TODO("Not yet implemented")
+            }
+        })
+    }
+
+    fun UpdateWaitingAnswerPlayer(gameId: String, number : Int){
+        db.getReference("games").child(gameId).child("WaitingAnswerPlayer").setValue(number)
+    }
+
+    fun decrementWaitingAnswerPlayer(gameId: String) {
+        val waitingPlayerRef = db.getReference("games").child(gameId).child("WaitingAnswerPlayer")
+
+        // Démarre une transaction pour lire et écrire la valeur de façon atomique.
+        waitingPlayerRef.runTransaction(object : Transaction.Handler {
+            override fun doTransaction(mutableData: MutableData): Transaction.Result {
+                val currentValue = mutableData.getValue(Int::class.java)
+                if (currentValue == null) {
+                    mutableData.value = 0 // Initialise à 0 si la valeur n'est pas définie.
+                } else if (currentValue > 0) {
+                    mutableData.value = currentValue - 1
+                    if (mutableData.value == 0){
+                        setFutureGameStartTime(gameId,5000)
+                    }
+                }
+                // Si la valeur actuelle est déjà à 0 ou moins, elle n'est pas changée.
+                return Transaction.success(mutableData)
+            }
+
+            override fun onComplete(databaseError: DatabaseError?, committed: Boolean, dataSnapshot: DataSnapshot?) {
+                if (committed) {
+                    println("Transaction réussie : WaitingAnswerPlayer décrémenté")
                 } else {
-                    // Optionally handle incorrect answer or provide feedback
+                    println("Transaction annulée, raison : ${databaseError?.message}")
+                }
+            }
+        })
+    }
+
+    fun setFutureGameStartTime(gameId: String, delayInMillis: Long) {
+        val gameRef = db.getReference("games").child(gameId).child("gameStartTime")
+
+        // Demander le timestamp serveur
+        gameRef.setValue(ServerValue.TIMESTAMP).addOnSuccessListener {
+            gameRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val serverTime = snapshot.getValue(Long::class.java) ?: 0
+                    val futureStartTime = serverTime + delayInMillis
+                    gameRef.setValue(futureStartTime)
                 }
 
-                // Optionally, navigate to the next question or update game state here
+                override fun onCancelled(error: DatabaseError) {
+                    println("Error getting server time: ${error.message}")
+                }
+            })
+        }
+    }
+
+
+    fun monitorGameStartTimeAndStart(gameId: String) {
+        val startTimeRef = db.getReference("games").child(gameId).child("gameStartTime")
+
+        startTimeRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val startTime = snapshot.getValue(Long::class.java)
+                if (startTime != null) {
+                    val currentTime = System.currentTimeMillis()
+                    if (currentTime >= startTime) {
+                        startGame()
+                        startTimeRef.removeEventListener(this) // Clean up listener
+                    } else {
+                        // Wait until the startTime to start the game
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            startGame()
+                        }, startTime - currentTime)
+                    }
+                }
             }
+
+            override fun onCancelled(error: DatabaseError) {
+                println("Failed to listen for game start time: ${error.message}")
+            }
+        })
+    }
+
+
+
+    fun monitorWaitingAnswerPlayer(gameId: String) {
+        val waitingPlayerRef = db.getReference("games").child(gameId).child("WaitingAnswerPlayer")
+
+        // Créez un ValueEventListener
+        val listener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                val value = dataSnapshot.getValue(Int::class.java) ?: 0 // Utilisez 0 comme valeur par défaut si non définie
+
+                if (value > 0) {
+                    displayFunction.value = false
+                    println("La valeur de WaitingAnswerPlayer est positive: $value")
+                    // Ajoutez ici tout comportement supplémentaire nécessaire lorsque la valeur est positive
+                } else {
+                    println("La valeur de WaitingAnswerPlayer est nulle ou moins.")
+                    // Comportement lorsque la valeur est nulle ou moins
+                    // Supprime l'écouteur si la valeur est nulle ou moins
+
+                    waitingPlayerRef.removeEventListener(this)
+                    displayFunction.value = false
+                    monitorGameStartTimeAndStart(gameId)
+                }
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                println("Écoute annulée pour WaitingAnswerPlayer, raison : ${databaseError.message}")
+            }
+        }
+
+        // Attribuez le listener à la référence
+        waitingPlayerRef.addValueEventListener(listener)
+    }
+
+
+    fun submitAnswer(gameId: String, username: String, correctAnswer: Boolean) {
+        if(!alreadyAnswered) {
+            alreadyAnswered=true
+            val gameRef = db.getReference("games/$gameId")
+
+            val playersRef = gameRef.child("players")
+
+//      Supposons que vous cherchez l'utilisateur avec le pseudo "Arno2"
+            val usernameQuery = playersRef.orderByChild("user/username").equalTo(username)
+            println("submit :$correctAnswer")
+            if (correctAnswer) {
+                usernameQuery.addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        if (snapshot.exists()) {
+                            for (playerSnapshot in snapshot.children) {
+                                val playerId =
+                                    playerSnapshot.key // Récupère l'ID du joueur, e.g., "0"
+                                val currentscore =
+                                    playerSnapshot.child("score").getValue(Int::class.java) ?: 0
+                                if (playerId != null) {
+                                    playersRef.child(playerId).child("score")
+                                        .setValue(currentscore + 1)
+                                        .addOnSuccessListener {
+                                            println("Score mis à jour avec succès pour le joueur $playerId")
+                                        }
+                                        .addOnFailureListener {
+                                            println("Échec de la mise à jour du score pour le joueur $playerId: ${it.message}")
+                                        }
+                                }
+
+
+                            }
+                        } else {
+                            println("Aucun joueur trouvé avec ce pseudo.")
+                        }
+
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {
+                        Timber.tag("InGameViewModel").e("Failed to update score: %s", error.message)
+                    }
+                })
+            }
+
+            monitorWaitingAnswerPlayer(gameId)
+            decrementWaitingAnswerPlayer(gameId)
+
+        }
+    }
+
+    fun startGame() {
+        viewModelScope.launch {
+            delay(5000) // Délai de 5 secondes
+            displayFunction.value = true
         }
     }
 
@@ -754,7 +794,7 @@ fun MultiScreen(
 
     when (gameState) {
         "waiting" -> DisplayWaitingRoom(viewModel,user,navController)
-        "startGame" -> (viewModel.gameId.collectAsState().value?.let { StartGame(navController, it) })
+        "startGame" -> (viewModel.gameId.collectAsState().value?.let { StartGame(navController, it,user) })
     }
 }
 
@@ -790,7 +830,7 @@ fun DisplayWaitingRoom(viewModel: MultiViewModel, user: User?, navController: Na
                     )
                     .clickable(onClick = {
                         if (user != null) {
-                            viewModel.leaveWaitingRoom(user,navController);
+                            viewModel.leaveWaitingRoom(user, navController);
 
 
                         }
@@ -870,23 +910,114 @@ fun DisplayScore(user: User,score : Int) {
 
 
 @Composable
-fun StartGame(navController: NavHostController, gameId : String) {
-    Background()
-    Text(gameId)
-    val gameModel : InGameViewModel = viewModel()
-    //Text(text = gameId)
+fun BoutonQCMMulti(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
 
-    LaunchedEffect(gameId) {
-        gameModel.fetchPlayers(gameId)
+    Box(
+        modifier = Modifier
+            .padding(vertical = 15.dp, horizontal = 30.dp)
+            .size(140.dp, 80.dp)
+            .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(20.dp))
+            .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
+            .clickable(onClick = {
+                onClick()
+            })
+
+
+    ) {
+        Text(
+            text = textbouton,
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.align(Alignment.Center),
+            fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.question.fontPrincipale
+        )
     }
+}
+
+@Composable
+fun DisplayQuestion(gameViewModel: InGameViewModel, gameId: String, qcm: QCM, user: User?) {
+    val liste = qcm.answers.shuffled()
+    val Questiontxt = qcm.question
+
+    gameViewModel.UpdateWaitingAnswerPlayer(gameId,2)
+
+    PanneauQuestion(350, 350, Questiontxt)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 40.dp),
+        verticalArrangement = Arrangement.Bottom,
+        horizontalAlignment = Alignment.End,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            BoutonQCMMulti(liste[0].answer, onClick = { user?.let {
+                gameViewModel.submitAnswer(gameId,
+                    it.username,liste[0].isRight)
+            } }, liste[0].isRight)
+            BoutonQCMMulti(liste[1].answer, { user?.let {
+                gameViewModel.submitAnswer(gameId,
+                    it.username,liste[1].isRight)
+            } }, liste[1].isRight)
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            BoutonQCMMulti(liste[2].answer, { user?.let {
+                gameViewModel.submitAnswer(gameId,
+                    it.username,liste[2].isRight)
+            } }, liste[2].isRight)
+            BoutonQCMMulti(liste[3].answer, { user?.let {
+                gameViewModel.submitAnswer(gameId,
+                    it.username,liste[3].isRight)
+            } }, liste[3].isRight)
+        }
+    }
+}
+
+
+@Composable
+fun ShowQuestion(gameViewModel: InGameViewModel, gameId: String, user: User?){
+    Background()
+    DisplayQuestion(gameViewModel,gameId, qcm = gameViewModel.questions.value!![0],user)
+}
+
+@Composable
+fun StartGame(navController: NavHostController, gameId: String, user: User?) {
+
+    val gameModel : InGameViewModel = viewModel()
 
     val players = gameModel.players.observeAsState(initial = emptyList())
+    val currentRound = gameModel.round.observeAsState()
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Text(text = "Players in Game", fontWeight = FontWeight.Normal,
-            fontSize = 24.sp, color = Color.White, fontFamily = fontPrincipale)
-        players.value.forEach { player ->
-            DisplayScore(player.user,player.score)
+    val shouldDisplayFunction = gameModel.displayFunction.collectAsState().value
+
+    if (shouldDisplayFunction) {
+        ShowQuestion(gameModel,gameId,user)  // Appelle la fonction DisplayFunction si l'état est vrai
+    } else {
+        Background()
+
+        LaunchedEffect(gameId) {
+            gameModel.fetchPlayers(gameId)
+            gameModel.fetchQuestions(gameId)
+            gameModel.fetchRound(gameId)
+            gameModel.startGame()
         }
+
+        Column(modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceAround,
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = "Round n° : ${currentRound.value}", fontWeight = FontWeight.Normal,
+                fontSize = 24.sp, color = Color.White, fontFamily = fontPrincipale)
+            players.value.forEach { player ->
+                DisplayScore(player.user,player.score)
+            }
+        } // Sinon, continue d'afficher l'interface utilisateur actuelle du jeu
     }
 }

@@ -462,6 +462,7 @@ fun questionGeneration(): QCM? {
         println("QuestionIndexList après suppression: ${QuestionIndexList.value.size}")
         val question = questionFromDatabase(categorie, randomQuestionIndex)
         qcmState.value = question
+        println("question : ${qcmState.value}")
 
     }
 
