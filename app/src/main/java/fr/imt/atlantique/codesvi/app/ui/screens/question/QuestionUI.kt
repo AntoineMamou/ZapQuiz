@@ -1,29 +1,19 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.question
 
+
+import GameViewModel
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.painterResource
-import androidx.navigation.NavHostController
-
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-
 import androidx.compose.foundation.layout.Column
-
-
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -38,6 +28,11 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,22 +41,34 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
-import fr.imt.atlantique.codesvi.app.data.model.QCM
 import fr.imt.atlantique.codesvi.app.data.model.Answer
+import fr.imt.atlantique.codesvi.app.data.model.QCM
+import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserId
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
+import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
 import java.text.Normalizer
@@ -124,7 +131,7 @@ var Reponse by mutableStateOf(true)
 var NombreQuestion = -1
 var NombreDeVies = 3
 
-var QuestionIndexList = mutableStateOf(IntArray(36)  { it }.toMutableList())
+var QuestionIndexList = mutableStateOf(IntArray(10)  { it }.toMutableList())
 // Recuperer la taille de la liste
 
 /*
@@ -295,7 +302,7 @@ fun Horizontalbar(reverse : Boolean, vertical : Boolean ) {
     LaunchedEffect(Unit) {
         while (progress < 1f) {
             delay(10) // Attendre 1 seconde
-            progress += 0.0016f // Augmenter la valeur de remplissage de 0.1 à chaque intervalle
+            progress += 0.001f // Augmenter la valeur de remplissage  à chaque intervalle
         }
     }
 
@@ -321,7 +328,8 @@ fun Horizontalbar(reverse : Boolean, vertical : Boolean ) {
 @Composable
 fun BoutonQCM(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
 
-        Box(
+
+    Box(
             modifier = Modifier
                 .padding(vertical = 15.dp, horizontal = 30.dp)
                 .size(140.dp, 80.dp)
@@ -330,6 +338,7 @@ fun BoutonQCM(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
                 .clickable(onClick = {
                     onClick()
                     Reponse = reponsebonne
+                    ScreenTransitor = true
                 })
 
 
@@ -355,22 +364,84 @@ fun BoutonQCM(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
 ##################################################
 */
 
+var ScreenTransitor = false
+
 @Composable
 fun ChangerQuestion(onClick: () -> Unit) {
-         if (Reponse) {
-            GenererQuestion (onClick)
-             NombreQuestion += 1
-         }else if (!Reponse) {
+    if(ScreenTransitor) {
+        if(Reponse) {
+            TransitorScreen(reponsebonne = true, onClick)
+        } else {
+            TransitorScreen(reponsebonne = false, onClick)
+        }
+    } else {
+        if (Reponse) {
+            GenererQuestion(onClick)
+            NombreQuestion += 1
+        } else if (!Reponse) {
             NombreDeVies = NombreDeVies - 1
-            if (NombreDeVies == 0){
+            if (NombreDeVies == 0) {
 
-            }else {
+            } else {
                 GenererQuestion(onClick)
 
             }
         }
+    }
 
 }
+@Composable
+fun TransitorScreen(reponsebonne: Boolean, onClick: () -> Unit) {
+    var ID = R.drawable.pouce_haut
+    if( reponsebonne == false){
+        ID = R.drawable.pouce_baisee
+    }
+    Column(
+        modifier = Modifier
+            .padding(top = 150.dp)
+            .fillMaxWidth(),
+
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+
+        ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(bottom = 20.dp, end = 10.dp)
+
+        ) {
+            Image(
+                painter = painterResource(id = ID),
+                contentDescription = "fermer", // Indiquez une description si nécessaire
+                modifier = Modifier.size(250.dp) // Ajuster la taille de l'image selon vos besoins
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .size(width = 200.dp, height = 75.dp)
+                .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(20.dp))
+                .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp))
+                .clickable(onClick = {
+                    onClick()
+                    ScreenTransitor = false
+                })
+
+
+        ) {
+            Text(
+                text = " Question suivante",
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.Center),
+                fontFamily = fontPrincipale
+            )
+        }
+    }
+}
+
 
 @Composable
 fun GenererQuestion(onClick: () -> Unit) {
@@ -388,18 +459,18 @@ fun GenererQuestion(onClick: () -> Unit) {
 
 
 
-
+// ACCES BD
 
 suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //rajoute une variable en fonction du type
     return suspendCancellableCoroutine { continuation ->
         val questionsRef = databaseGlobal.getReference("questions/$theme")
+
         val valueEventListener = object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 for (questionSnapshot in dataSnapshot.children) {
                     val questionId = questionSnapshot.key?.toIntOrNull()
                     if (questionId == randomNumber) {
                         //val question = questionSnapshot.getValue(QCM::class.java)
-
 
                         val id = questionSnapshot.child("id").getValue(String::class.java)
                         val type = questionSnapshot.child("type").getValue(String::class.java)
@@ -447,6 +518,42 @@ suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //ra
     }
 }
 
+suspend fun getQuestionCategorySize(theme: String): Int {
+    return suspendCancellableCoroutine { continuation ->
+        val questionsRef = databaseGlobal.getReference("questions/$theme")
+
+        val valueEventListener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                val categorySize = dataSnapshot.childrenCount
+                continuation.resume(categorySize.toInt())
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                continuation.resumeWithException(databaseError.toException())
+            }
+        }
+
+        questionsRef.addListenerForSingleValueEvent(valueEventListener)
+
+        // Annuler l'écouteur de valeurs lorsque la coroutine est annulée
+        continuation.invokeOnCancellation {
+            questionsRef.removeEventListener(valueEventListener)
+        }
+    }
+}
+
+fun RandomCategorie(): String {
+    val categories = listOf(
+        "Histoire", "Géographie", "Musique", "Cinéma","Littérature", "Autres arts",
+        "Sport", "Jeux vidéo", "Sciences"
+    )
+
+    val randomCategoryIndex = (0 until categories.size).random()  // Génère un index aléatoire dans la plage des indices de la liste
+    val randomCategory = removeAccentsAndUpperCase(categories[randomCategoryIndex]) // Récupère la catégorie correspondante à l'index aléatoire
+
+    return randomCategory
+}
+
 
 
 @SuppressLint("CoroutineCreationDuringComposition")
@@ -459,10 +566,16 @@ fun questionGeneration(): QCM? {
 
     LaunchedEffect(randomIndex) {
         QuestionIndexList.value.removeAt(randomIndex)
-        println("QuestionIndexList après suppression: ${QuestionIndexList.value.size}")
-        val question = questionFromDatabase(categorie, randomQuestionIndex)
+        var question : QCM?
+
+        if (categorie != "tout_theme") {
+            question = questionFromDatabase(categorie, randomQuestionIndex)
+
+        } else {
+            val randomcategory = RandomCategorie()
+            question = questionFromDatabase(randomcategory, randomQuestionIndex)
+        }
         qcmState.value = question
-        println("question : ${qcmState.value}")
 
     }
 
@@ -485,6 +598,7 @@ fun questionGeneration(): QCM? {
 fun QuestionChoixMultiple(onClick: () -> Unit, qcm: QCM ) {
         val liste = qcm.answers.shuffled()
         val Questiontxt = qcm.question
+
 
         PanneauQuestion(350, 350, Questiontxt)
         Column(
@@ -619,7 +733,8 @@ fun QuestionText(onClick: () -> Unit, qcm : QCM) {
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun GameOver(
-    navController : NavHostController
+    navController : NavHostController,
+    viewModel: GameViewModel
 ) {
     QuestionIndexList = mutableStateOf( IntArray(20)  { it }.toMutableList())
     Column(
@@ -712,7 +827,7 @@ fun GameOver(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "0 coins gagnés",
+                        text = "${NombreQuestion*5} coins gagnés",
                         color = Color.White,
                         fontFamily = fontPrincipale,
                         fontSize = 15.sp,
@@ -742,8 +857,15 @@ fun GameOver(
                     )
                     .clickable(onClick = {
                         navController.navigate(RootScreen.Home.route);
+                        viewModel.changeAnyAtomicV2(
+                            game_played = user!!.game_played + 1,
+                            //multiplicateur de money en fonction de difficulté ??
+                            money = user!!.money + NombreQuestion*5
+                        )
                         NombreQuestion = 0
                         NombreDeVies = 4
+
+
 
                     })
 
@@ -767,6 +889,130 @@ fun GameOver(
     }
 }
 
+
+// IMPOSSIBLE A IMPORTER AAAAAAA
+class GameViewModel : ViewModel() {
+    private val _userState = MutableStateFlow<User?>(null)
+    val userState: StateFlow<User?> = _userState.asStateFlow()
+
+    fun loadUser(username: String?) {
+        viewModelScope.launch {
+            username?.let {
+                val user = getUserInfoDatabase(it)
+                _userState.value = user
+            }
+        }
+    }
+
+
+    fun changeAnyAtomicV2(
+        trophies: Int? = _userState.value?.trophies,
+        playerIcon: String? = _userState.value?.playerIcon,
+        title: String? = _userState.value?.title,
+        connectionState: Boolean? = _userState.value?.connectionState,
+        victory: Int? = _userState.value?.victory,
+        game_played: Int? = _userState.value?.game_played,
+        peak_trophy: Int? = _userState.value?.peak_trophy,
+        favorite_category: String? = _userState.value?.favorite_category,
+        money: Int? = _userState.value?.money
+    ) {
+        getUserId(user!!.username) { userId ->
+            val database =
+                FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+            val usersRef = database.getReference("utilisateurs/$userId")
+
+            usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    var existingUser = dataSnapshot.getValue(User::class.java)
+
+                    if (existingUser != null) {
+                        var isUpdated = false
+
+
+                        if (existingUser.playerIcon != playerIcon) {
+                            if (playerIcon != null) {
+                                existingUser.playerIcon = playerIcon
+                                isUpdated = true
+                            }
+                        }
+
+
+                        if (existingUser.title != title) {
+                            if (title != null) {
+                                existingUser.title = title
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.victory != victory) {
+                            if (victory != null) {
+                                existingUser.victory = victory
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.game_played != game_played) {
+                            if (game_played != null) {
+                                existingUser.game_played = game_played
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.peak_trophy != peak_trophy) {
+                            if (peak_trophy != null) {
+                                existingUser.peak_trophy = peak_trophy
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.favorite_category != favorite_category) {
+                            if (favorite_category != null) {
+                                existingUser.favorite_category = favorite_category
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.money != money) {
+                            if (money != null) {
+                                existingUser.money = money
+                                isUpdated = true
+                            }
+                        }
+
+                        if (existingUser.connectionState != connectionState) {
+                            if (connectionState != null) {
+                                existingUser.connectionState = connectionState
+                            }
+                        }
+
+                        if (existingUser.trophies != trophies) {
+                            if (trophies != null) {
+                                existingUser.trophies = trophies
+                            }
+                        }
+
+                        if (isUpdated) {
+                            usersRef.setValue(existingUser)
+                                .addOnSuccessListener {
+                                    // Update the user state only if Firebase update was successful
+                                    _userState.value = existingUser
+                                }
+                                .addOnFailureListener { e ->
+                                    println("Error updating user: $e")
+                                }
+                        }
+                    }
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    println("Error fetching user: $databaseError")
+                }
+            })
+
+        }
+    }
+}
+
 /*
 ##################################################
 #                 MODE DE JEU                    #
@@ -775,10 +1021,20 @@ fun GameOver(
 
 @Composable
 fun Global(
-    navController : NavHostController
+    navController : NavHostController,
+    viewModel: GameViewModel
 ){
 
+
     var currentContent by remember { mutableStateOf(0) }
+
+    LaunchedEffect(currentContent){
+        if (NombreQuestion == 0) {
+            QuestionIndexList =  mutableStateOf(IntArray(getQuestionCategorySize(categorie))  { it }.toMutableList())
+            println("renitialisation")
+        }
+        println(QuestionIndexList)
+    }
 
     if (gameMode == "Solo") {
         var timer by remember { mutableStateOf(Timer()) }
@@ -811,12 +1067,16 @@ fun Global(
                 // Add more cases as needed
             }
 
-            if (time_spend == 1000 || time_spend == 1001){
-                Reponse = false
-                currentContent = 1 - currentContent
 
+            if ((time_spend == 1500 || time_spend == 1501) && ScreenTransitor == false){
+                println("plus de temps")
+                Reponse = false
+                ScreenTransitor = true
+                currentContent = 1 - currentContent
             }
-        ProgressBar(NombreDeVies, NombreQuestion) } else { GameOver(navController)
+
+
+        ProgressBar(NombreDeVies, NombreQuestion) } else { GameOver(navController, viewModel)
         currentContent = 2}
 
 
@@ -832,7 +1092,6 @@ fun Global(
             1 -> ChangerQuestion(onClick = { currentContent = 1 - currentContent })
             // Add more cases as needed
         }
-        println(NombreDeVies)
         ProgressBar(NombreDeVies, NombreQuestion)
 
 
@@ -849,10 +1108,15 @@ fun Global(
 
 @Composable
 fun QuestionScreen(
-    state : QuestionState,
+    state: QuestionState,
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+    val viewModel = GameViewModel()
+    val userState by viewModel.userState.collectAsState()
+
+
+
 
     /*empeche le retour en arrière*/
     BackHandler(enabled = true) {
@@ -862,7 +1126,7 @@ fun QuestionScreen(
     }
 
     Background()
-    Global(navController)
+    Global(navController, viewModel)
 
 
 }
