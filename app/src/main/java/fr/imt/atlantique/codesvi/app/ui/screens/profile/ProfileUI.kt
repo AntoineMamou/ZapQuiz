@@ -71,11 +71,17 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.User
+import fr.imt.atlantique.codesvi.app.ui.screens.game.DisplayTitles
+import fr.imt.atlantique.codesvi.app.ui.screens.game.GameViewModel
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
+import fr.imt.atlantique.codesvi.app.ui.screens.game.ScrollableColumnWithImages
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.addFriendfromId
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getUser
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
+import fr.imt.atlantique.codesvi.app.ui.screens.game.loadIconNames
+import fr.imt.atlantique.codesvi.app.ui.screens.game.loadTitleNames
 import fr.imt.atlantique.codesvi.app.ui.screens.game.removeFriendRequest
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import kotlinx.coroutines.Job
@@ -454,7 +460,9 @@ fun PopupWindow(
                                 ) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.tick),
-                                        contentDescription = "Accept"
+                                        contentDescription = "Accept",
+                                        modifier = Modifier.size(30.dp),
+                                        tint = Color.Green
                                     )
                                 }
                                 IconButton(
@@ -468,7 +476,9 @@ fun PopupWindow(
                                 ) {
                                     Icon(
                                         painter = painterResource(id = R.drawable.cross),
-                                        contentDescription = "Remove"
+                                        contentDescription = "Remove",
+                                        modifier = Modifier.size(20.dp),
+                                        tint = Color.Red
                                     )
                                 }
                             }
@@ -676,7 +686,15 @@ fun ProfileScreen(
         context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
     }
 
+    val gameModel = GameViewModel()
 
+    val userState by gameModel.userState.collectAsState()
+    val username = sharedPreferences.getString("username", "")
+
+    // Déclenchez le chargement de l'utilisateur
+
+
+    userState?.let { getUser(it) }
 
     //Permet de gérer l'affichage ou non de la fenêtre des paramètres
     var settingsModalVisible by remember { mutableStateOf(false) }
@@ -687,13 +705,14 @@ fun ProfileScreen(
         SettingsWindow(onClose = { settingsModalVisible = false }, sharedPreferences, navController)
     }
 
-
+    var changeIconVisible by remember { mutableStateOf(false) }
+    var changeTitleVisible by remember { mutableStateOf(false) }
     //Permet de gérer l'affichage ou non de la fenêtre de profil
     var profilVisible by remember { mutableStateOf(false) }
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (profilVisible) {
-        user?.let { ProfilWindow(onClose = { profilVisible = false }, it, false, {}) }
+        user?.let { ProfilWindow(onClose = { profilVisible = false }, it, false, {changeIconVisible = true}, {changeTitleVisible = true}) }
     }
 
 
@@ -763,6 +782,7 @@ fun ProfileScreen(
 
     var userProfilVisible by remember { mutableStateOf(false) }
     var user_display = remember { mutableStateOf<User?>(null) }
+
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (userProfilVisible) {
         user_display.value?.let { user?.friends?.let { it1 -> ProfilWindow(onClose = { userProfilVisible = false }, user_display = it, !it1.contains(user_display.value!!.username), {})} }
@@ -783,4 +803,30 @@ fun ProfileScreen(
     if (friendsRequestVisible){
         PopupWindow(friends_request = friendsRequestList, onClose = {friendsRequestVisible = false})
     }
+
+
+
+
+    if (changeIconVisible) {
+        ScrollableColumnWithImages(
+            loadIconNames(context), onClose = { changeIconVisible = false }, gameModel
+        )
+    }
+
+    if (changeTitleVisible) {
+        DisplayTitles(
+            titleList = loadTitleNames(
+                context
+            ), onClose = { changeTitleVisible = false }, gameModel
+        )
+    }
+
+    // Problème d'update que je n'arrive pas a résoudre
+    //cette solution risque de créer un chargement infini / crash ?
+   LaunchedEffect(key1 = userState?.username + userState?.playerIcon + userState?.title + changeTitleVisible + changeIconVisible
+            ) {
+        gameModel.loadUser(username)
+        println("ok")
+    }
+
 }

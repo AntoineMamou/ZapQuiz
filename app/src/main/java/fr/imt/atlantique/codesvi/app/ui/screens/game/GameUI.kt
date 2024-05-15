@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -1053,7 +1054,8 @@ fun ScrollableColumnWithImages(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onClose),
+            .clickable(onClick = onClose)
+            .zIndex(1f),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -1118,11 +1120,89 @@ fun ScrollableColumnWithImages(
 }
 
 @Composable
+fun DisplayTitles(
+    titleList: List<String>,
+    onClose: () -> Unit,
+    viewModel: GameViewModel
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onClose)
+            .zIndex(1f),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.8F)
+                .height(350.dp)
+                .align(Alignment.Center)
+                .background(colorResource(id = R.color.blue_2), shape = RoundedCornerShape(15.dp))
+                .border(
+                    width = 4.dp,
+                    color = Color.Black,
+                    shape = RoundedCornerShape(15.dp)
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        colorResource(id = R.color.blue_2),
+                        shape = RoundedCornerShape(15.dp)
+                    )
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.SpaceAround,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Changer de titre",
+                    fontFamily = fontPrincipale,
+                    color = Color.White,
+                    fontSize = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.SpaceAround,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    items(titleList) { title ->
+                        Text(
+                            text = title,
+                            fontFamily = fontPrincipale,
+                            color = Color.LightGray,
+                            fontSize = 16.sp,
+                            modifier = Modifier
+                                .clickable {
+                                    // Handle title click here
+                                    viewModel.changeAnyAtomicV2(title = title);
+                                    onClose()
+                                }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                Button(onClick = onClose) {
+                    Text("Fermer")
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
 fun ProfilWindow(
     onClose: () -> Unit,
     user_display : User,
     isNotFriend: Boolean,
-    onDisplayIcons: () -> Unit
+    onDisplayIcons: () -> Unit,
+    onDisplayTitles: () -> Unit = {}
 
     ){
     // La taille de la fenêtre modale des paramètres
@@ -1229,7 +1309,17 @@ fun ProfilWindow(
                             text = user_display.title,
                             color = Color.LightGray,
                             fontSize = 16.sp,
-                            fontFamily = fontPrincipale
+                            fontFamily = fontPrincipale,
+                            modifier = Modifier.clickable(onClick =
+                            {
+                                if(user_display.username.equals(user!!.username)){
+                                    onClose();
+                                    onDisplayTitles()
+                                }
+                            }
+
+                            )
+
                         )
 
                     }
@@ -1455,6 +1545,43 @@ fun removeIconName(context: Context, iconName: String) {
     editor.putStringSet("iconNames", iconNames)
     editor.apply()
 }
+fun getSharedPreferencesTitles(context: Context): SharedPreferences {
+    return context.getSharedPreferences("TitleNames", Context.MODE_PRIVATE)
+}
+
+// Function to load title names from SharedPreferences, initializes if nothing is saved
+fun loadTitleNames(context: Context): List<String> {
+    val sharedPreferences = getSharedPreferencesTitles(context)
+    return sharedPreferences.getStringSet("titleNames", null)?.toList()
+        ?: listOf("Zappeur Débutant")
+}
+
+fun addTitleName(context: Context, titleName: String) {
+    val sharedPreferences = getSharedPreferencesTitles(context)
+    val titleNames = sharedPreferences.getStringSet("titleNames", mutableSetOf())?.toMutableSet()
+        ?: mutableSetOf()
+
+    if(!titleName.contains(titleName)) {
+        titleNames.add(titleName)
+    }
+
+    val editor = sharedPreferences.edit()
+    editor.putStringSet("titleNames", titleNames)
+    editor.apply()
+}
+
+fun removeTitleName(context: Context, titleName: String) {
+    val sharedPreferences = getSharedPreferencesTitles(context)
+    val titleNames = sharedPreferences.getStringSet("titleNames", mutableSetOf())?.toMutableSet()
+        ?: mutableSetOf()
+
+    titleNames.remove(titleName)
+
+    val editor = sharedPreferences.edit()
+    editor.putStringSet("titleNames", titleNames)
+    editor.apply()
+}
+
 
 
 
@@ -1491,6 +1618,7 @@ fun GameScreen(
     var settingsModalVisible by remember { mutableStateOf(false) }
     var profilVisible by remember { mutableStateOf(false) }
     var changeIconVisible by remember { mutableStateOf(false) }
+    var changeTitleVisible by remember { mutableStateOf(false) }
     var icons = loadIconNames(context)
     //removeIconName(context, "pig")
     println(icons)
@@ -1505,7 +1633,8 @@ fun GameScreen(
                 onClose = { profilVisible = false },
                 user!!,
                 false,
-                onDisplayIcons = { changeIconVisible = true }
+                onDisplayIcons = { changeIconVisible = true },
+                onDisplayTitles = { changeTitleVisible = true }
             )
         }
     }
@@ -1522,5 +1651,20 @@ fun GameScreen(
         ScrollableColumnWithImages(
             icons, onClose = { changeIconVisible = false },viewModel
         )
+    }
+
+
+    var titles = loadTitleNames(context)
+    if(titles.isEmpty())
+    {
+        addTitleName(context, "Zappeur Débutant")
+
+    }
+
+
+    println(titles)
+
+    if (changeTitleVisible) {
+        DisplayTitles(titleList = titles, onClose = {changeTitleVisible = false}, viewModel)
     }
 }
