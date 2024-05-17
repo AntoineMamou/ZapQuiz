@@ -1,7 +1,6 @@
 package fr.imt.atlantique.codesvi.app.data.model
 
 import android.content.Context
-import fr.imt.atlantique.codesvi.app.R
 
 data class User(
     val username : String,
@@ -16,7 +15,9 @@ data class User(
     var peak_trophy : Int,
     var favorite_category : String,
     var money : Int,
-    var friendsRequest : List<String>
+    var friendsRequest : List<String>,
+    var availableIcons : List<String>,
+    var availableTitles : List<String>
 ){
     constructor() : this(
         "",
@@ -31,12 +32,25 @@ data class User(
         50,
         "None",
         100,
-        listOf()
+        listOf(),
+        listOf(
+            "lightning", "lightning_blue", "lightning_black",
+            "lightning_red", "lightning_green", "lightning_white",
+            "lightning_purple", "lightning_pink"
+        ),
+        listOf("Zappeur débutant")
     )
 
     fun getImageResourceId(context: Context): Int {
-        return context.resources.getIdentifier(playerIcon, "drawable", context.packageName)
+        val resourceId = context.resources.getIdentifier(playerIcon, "drawable", context.packageName)
+        return if (resourceId != 0) {
+            resourceId
+        } else {
+            // Return the ID for "lightning" drawable as a fallback
+            context.resources.getIdentifier("lightning", "drawable", context.packageName)
+        }
     }
+
 
 }
 

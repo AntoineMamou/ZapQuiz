@@ -85,7 +85,13 @@ val fontChiffre  = FontFamily(Font(R.font.bubble_bobble))
 var user : User? = null
 
 fun getAnyImageId(image: String, context: Context): Int {
-    return context.resources.getIdentifier(image, "drawable", context.packageName)
+    val resourceId = context.resources.getIdentifier(image, "drawable", context.packageName)
+    return if (resourceId != 0) {
+        resourceId
+    } else {
+        // Return the ID for "lightning" drawable as a fallback
+        context.resources.getIdentifier("lightning", "drawable", context.packageName)
+    }
 }
 
 fun getUser(user_eff : User){
@@ -129,8 +135,21 @@ suspend fun getUserInfoDatabase(
                         for (friendRequestSnapshot in friendsRequestSnapshot.children) {
                             friendsRequest.add(friendRequestSnapshot.value.toString())
                         }
+
+                        val availableIcons = ArrayList<String>()
+                        val availableTitles = ArrayList<String>()
+
+                        val availableIconsSnapshot = userSnapshot.child("availableIcons")
+                        for (iconSnapshot in availableIconsSnapshot.children) {
+                            availableIcons.add(iconSnapshot.value.toString())
+                        }
+
+                        val availableTitlesSnapshot = userSnapshot.child("availableTitles")
+                        for (titleSnapshot in availableTitlesSnapshot.children) {
+                            availableTitles.add(titleSnapshot.value.toString())
+                        }
                         Timber.d("fini pour $userSearched")
-                        val user = User(id, password, trophies, playerIcon, title, connectionState, friendsList, victory, gamePlayed, peakTrophy, favoriteCategory, money, friendsRequest)
+                        val user = User(id, password, trophies, playerIcon, title, connectionState, friendsList, victory, gamePlayed, peakTrophy, favoriteCategory, money, friendsRequest, availableIcons, availableTitles)
                         continuation.resume(user)
                         return
                     }
@@ -1399,7 +1418,7 @@ class GameViewModel : ViewModel() {
     }
 
 
- fun changeAnyAtomicV2(
+    fun changeAnyAtomicV2(
         trophies: Int? = _userState.value?.trophies,
         playerIcon: String? = _userState.value?.playerIcon,
         title: String? = _userState.value?.title,
@@ -1408,7 +1427,9 @@ class GameViewModel : ViewModel() {
         game_played: Int? = _userState.value?.game_played,
         peak_trophy: Int? = _userState.value?.peak_trophy,
         favorite_category: String? = _userState.value?.favorite_category,
-        money: Int? = _userState.value?.money
+        money: Int? = _userState.value?.money,
+        newAvailableIcon: String? = null,
+        newAvailableTitle: String? = null,
     ) {
         getUserId(user!!.username) { userId ->
             val database =
@@ -1422,14 +1443,12 @@ class GameViewModel : ViewModel() {
                     if (existingUser != null) {
                         var isUpdated = false
 
-
                         if (existingUser.playerIcon != playerIcon) {
                             if (playerIcon != null) {
                                 existingUser.playerIcon = playerIcon
                                 isUpdated = true
                             }
                         }
-
 
                         if (existingUser.title != title) {
                             if (title != null) {
@@ -1476,13 +1495,27 @@ class GameViewModel : ViewModel() {
                         if (existingUser.connectionState != connectionState) {
                             if (connectionState != null) {
                                 existingUser.connectionState = connectionState
+                                isUpdated = true
                             }
                         }
 
                         if (existingUser.trophies != trophies) {
                             if (trophies != null) {
                                 existingUser.trophies = trophies
+                                isUpdated = true
                             }
+                        }
+
+                        if (newAvailableIcon != null && !existingUser.availableIcons.contains(newAvailableIcon)) {
+                            existingUser.availableIcons =
+                                existingUser.availableIcons + newAvailableIcon
+                            isUpdated = true
+                        }
+
+                        if (newAvailableTitle != null && !existingUser.availableTitles.contains(newAvailableTitle)) {
+                            existingUser.availableTitles =
+                                existingUser.availableTitles + newAvailableTitle
+                            isUpdated = true
                         }
 
                         if (isUpdated) {
@@ -1502,88 +1535,9 @@ class GameViewModel : ViewModel() {
                     println("Error fetching user: $databaseError")
                 }
             })
-
         }
     }
 }
-
-fun getSharedPreferences(context: Context): SharedPreferences {
-    return context.getSharedPreferences("IconNames", Context.MODE_PRIVATE)
-}
-
-// Function to load icon names from SharedPreferences, initializes if nothing is saved
-fun loadIconNames(context: Context): List<String> {
-    val sharedPreferences = getSharedPreferences(context)
-    return sharedPreferences.getStringSet("iconNames", null)?.toList()
-        ?: listOf(
-            "lightning", "lightning_blue", "lightning_black",
-            "lightning_red", "lightning_green", "lightning_white",
-            "lightning_purple", "lightning_pink"
-        )
-}
-
-fun addIconName(context: Context, iconName: String) {
-    val sharedPreferences = getSharedPreferences(context)
-    val iconNames = sharedPreferences.getStringSet("iconNames", mutableSetOf())?.toMutableSet()
-        ?: mutableSetOf()
-
-    iconNames.add(iconName)
-
-    val editor = getSharedPreferences(context).edit()
-    editor.putStringSet("iconNames", iconNames)
-    editor.apply()
-}
-
-fun removeIconName(context: Context, iconName: String) {
-    val sharedPreferences = getSharedPreferences(context)
-    val iconNames = sharedPreferences.getStringSet("iconNames", mutableSetOf())?.toMutableSet()
-        ?: mutableSetOf()
-
-    iconNames.remove(iconName)
-
-    val editor = getSharedPreferences(context).edit()
-    editor.putStringSet("iconNames", iconNames)
-    editor.apply()
-}
-fun getSharedPreferencesTitles(context: Context): SharedPreferences {
-    return context.getSharedPreferences("TitleNames", Context.MODE_PRIVATE)
-}
-
-// Function to load title names from SharedPreferences, initializes if nothing is saved
-fun loadTitleNames(context: Context): List<String> {
-    val sharedPreferences = getSharedPreferencesTitles(context)
-    return sharedPreferences.getStringSet("titleNames", null)?.toList()
-        ?: listOf("Zappeur Débutant")
-}
-
-fun addTitleName(context: Context, titleName: String) {
-    val sharedPreferences = getSharedPreferencesTitles(context)
-    val titleNames = sharedPreferences.getStringSet("titleNames", mutableSetOf())?.toMutableSet()
-        ?: mutableSetOf()
-
-    if(!titleName.contains(titleName)) {
-        titleNames.add(titleName)
-    }
-
-    val editor = sharedPreferences.edit()
-    editor.putStringSet("titleNames", titleNames)
-    editor.apply()
-}
-
-fun removeTitleName(context: Context, titleName: String) {
-    val sharedPreferences = getSharedPreferencesTitles(context)
-    val titleNames = sharedPreferences.getStringSet("titleNames", mutableSetOf())?.toMutableSet()
-        ?: mutableSetOf()
-
-    titleNames.remove(titleName)
-
-    val editor = sharedPreferences.edit()
-    editor.putStringSet("titleNames", titleNames)
-    editor.apply()
-}
-
-
-
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
@@ -1619,9 +1573,7 @@ fun GameScreen(
     var profilVisible by remember { mutableStateOf(false) }
     var changeIconVisible by remember { mutableStateOf(false) }
     var changeTitleVisible by remember { mutableStateOf(false) }
-    var icons = loadIconNames(context)
-    //removeIconName(context, "pig")
-    println(icons)
+
 
     // Affichage des fenêtres modales
     if (settingsModalVisible) {
@@ -1649,22 +1601,11 @@ fun GameScreen(
 
     if (changeIconVisible) {
         ScrollableColumnWithImages(
-            icons, onClose = { changeIconVisible = false },viewModel
+            user!!.availableIcons, onClose = { changeIconVisible = false },viewModel
         )
     }
 
-
-    var titles = loadTitleNames(context)
-    if(titles.isEmpty())
-    {
-        addTitleName(context, "Zappeur Débutant")
-
-    }
-
-
-    println(titles)
-
     if (changeTitleVisible) {
-        DisplayTitles(titleList = titles, onClose = {changeTitleVisible = false}, viewModel)
+        DisplayTitles(titleList = user!!.availableTitles, onClose = {changeTitleVisible = false}, viewModel)
     }
 }
