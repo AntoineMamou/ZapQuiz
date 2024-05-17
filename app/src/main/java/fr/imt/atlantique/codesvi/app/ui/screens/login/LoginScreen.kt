@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -28,9 +30,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -364,6 +371,12 @@ fun LoginScreen(
                     contentScale = ContentScale.FillBounds
                 )
 
+                var pseudo by remember { mutableStateOf("") }
+                var motDePasse by remember { mutableStateOf("") }
+                val focusRequester = FocusRequester()
+                val focusManager = LocalFocusManager.current
+                val keyboardController = LocalSoftwareKeyboardController.current
+
                 Column {
                     Row {
                         Spacer(modifier = Modifier.width(16.dp))
@@ -375,10 +388,16 @@ fun LoginScreen(
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
-                    TextField(value = pseudo,
+                    TextField(
+                        value = pseudo,
                         onValueChange = { pseudo = it },
                         shape = RoundedCornerShape(8.dp),
-                        placeholder = { Text("Pseudo :") })
+                        placeholder = { Text("Pseudo :") },
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next),
+                        keyboardActions = KeyboardActions(
+                            onNext = { focusRequester.requestFocus() }
+                        )
+                    )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -386,30 +405,33 @@ fun LoginScreen(
                         value = motDePasse,
                         onValueChange = { motDePasse = it },
                         shape = RoundedCornerShape(8.dp),
-                        placeholder = { Text("Mot de passe :") })
-
+                        placeholder = { Text("Mot de passe :") },
+                        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                keyboardController?.hide()
+                            }
+                        ),
+                        modifier = Modifier.focusRequester(focusRequester)
+                    )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row {
                         Button(onClick = {
                             viewModel.connecterUtilisateur(pseudo, motDePasse, sharedPreferences, navController)
-
                         }) {
                             Text(text = "Se Connecter ")
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(onClick = {
-                            viewModel.creerCompte(pseudo, motDePasse,sharedPreferences,navController)
+                            viewModel.creerCompte(pseudo, motDePasse, sharedPreferences, navController)
                         }) {
                             Text(text = "Créer un compte ")
                         }
                     }
                 }
             }
+            }
         }
-    }
-
-
-
 }
