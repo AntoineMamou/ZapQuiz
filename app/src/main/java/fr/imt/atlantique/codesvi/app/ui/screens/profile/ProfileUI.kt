@@ -42,7 +42,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -80,14 +79,10 @@ import fr.imt.atlantique.codesvi.app.ui.screens.game.addFriendfromId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUser
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
-import fr.imt.atlantique.codesvi.app.ui.screens.game.loadIconNames
-import fr.imt.atlantique.codesvi.app.ui.screens.game.loadTitleNames
 import fr.imt.atlantique.codesvi.app.ui.screens.game.removeFriendRequest
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -542,64 +537,6 @@ suspend fun getAllUsernames(): List<String> {
     }
 }
 
-@Composable
-fun changeUsersList2(filteredNouns: List<String>): SnapshotStateList<User> {
-    var usersList by remember { mutableStateOf<SnapshotStateList<User>>(mutableStateListOf()) }
-
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(filteredNouns.joinToString()) {
-        val newUsersList = mutableListOf<User>()
-
-        // Launch new jobs for each username in filteredNouns
-        for (username in filteredNouns) {
-            coroutineScope.launch {
-                val user = getUserInfoDatabase(username)
-
-                // Add the new user to the temporary list
-                user?.let {
-                    newUsersList.add(it)
-                }
-
-                // Update usersList with the new list
-                usersList = mutableStateListOf(*newUsersList.toTypedArray())
-            }
-        }
-    }
-
-    return usersList
-}
-
-@Composable
-fun changeUsersList(filteredNouns: List<String>): SnapshotStateList<User> {
-    var usersList by remember { mutableStateOf<SnapshotStateList<User>>(mutableStateListOf()) }
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(filteredNouns.joinToString()) {
-        val newUsersList = mutableListOf<User>()
-        val jobs = mutableListOf<Job>()
-
-        for (username in filteredNouns) {
-            val job = coroutineScope.launch {
-                val user = getUserInfoDatabase(username)
-                user?.let {
-                    synchronized(newUsersList) {
-                        newUsersList.add(it)
-                    }
-                }
-            }
-            jobs.add(job)
-        }
-
-        // Attendre que toutes les coroutines soient terminées
-        jobs.joinAll()
-
-        // Mettre à jour la liste des utilisateurs une fois toutes les données chargées
-        usersList = mutableStateListOf(*newUsersList.toTypedArray())
-    }
-
-    return usersList
-}
 
 
 @Composable
@@ -809,15 +746,14 @@ fun ProfileScreen(
 
     if (changeIconVisible) {
         ScrollableColumnWithImages(
-            loadIconNames(context), onClose = { changeIconVisible = false }, gameModel
+            user!!.availableIcons, onClose = { changeIconVisible = false }, gameModel
         )
     }
 
     if (changeTitleVisible) {
         DisplayTitles(
-            titleList = loadTitleNames(
-                context
-            ), onClose = { changeTitleVisible = false }, gameModel
+            titleList = user!!.availableTitles,
+            onClose = { changeTitleVisible = false }, gameModel
         )
     }
 

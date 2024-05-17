@@ -51,11 +51,8 @@ import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ScrollableColumnWithImages
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
-import fr.imt.atlantique.codesvi.app.ui.screens.game.addIconName
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getAnyImageId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUser
-import fr.imt.atlantique.codesvi.app.ui.screens.game.loadIconNames
-import fr.imt.atlantique.codesvi.app.ui.screens.game.loadTitleNames
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
 
@@ -343,7 +340,7 @@ fun InfoBuyWindow(
                                 .size(30.dp)
                         )
                     }
-                    val buyable = isBuyable(icon, loadIconNames(context))
+                    val buyable = isBuyable(icon, user!!.availableIcons)
 
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
@@ -363,9 +360,9 @@ fun InfoBuyWindow(
 
                             .clickable(enabled = buyable, onClick = {
                                 viewModel.changeAnyAtomicV2(
-                                    money = user!!.money - icon.iconPrice
+                                    money = user!!.money - icon.iconPrice,
+                                    newAvailableIcon = icon.iconSourceName
                                 )
-                                addIconName(context, icon.iconSourceName)
                                 onClose()
                             })
 
@@ -454,11 +451,11 @@ fun ShopScreen(
 
     if (changeIconVisible) {
         ScrollableColumnWithImages(
-            loadIconNames(context), onClose = { changeIconVisible = false }, gameModel
+            user!!.availableIcons, onClose = { changeIconVisible = false }, gameModel
         )
     }
     if (changeTitleVisible) {
-        DisplayTitles(titleList = loadTitleNames(context), onClose = {changeTitleVisible = false}, viewModel)
+        DisplayTitles(titleList = user!!.availableTitles, onClose = {changeTitleVisible = false}, viewModel)
     }
 
 
