@@ -341,7 +341,18 @@ class MultiViewModel : ViewModel() {
 
         QCM(answers=listOf(Answer(isRight=true, answer="États-Unis"), Answer(isRight=false, answer="Canada"), Answer(isRight=false, answer="Australie"), Answer(isRight=false, answer="Argentine")), id="geographie_17", type="qcm_4", category="géographie", level=2, question="Dans quel pays se trouve le parc national de Yellowstone ?", image="", gap=0F, explanation=""),
 
-        QCM(answers=listOf(Answer(isRight=false, answer="Lac Supérieur"), Answer(isRight=false, answer="Lac Victoria"), Answer(isRight=true, answer="Lac Baïkal"), Answer(isRight=false, answer="Lac Tanganyika")), id="geographie_19", type="qcm_4", category="géographie", level=5, question="Quel est le plus grand lac du monde en volume d'eau ?", image="", gap=0F, explanation="")
+        QCM(answers=listOf(Answer(isRight=false, answer="Lac Supérieur"), Answer(isRight=false, answer="Lac Victoria"), Answer(isRight=true, answer="Lac Baïkal"), Answer(isRight=false, answer="Lac Tanganyika")), id="geographie_19", type="qcm_4", category="géographie", level=5, question="Quel est le plus grand lac du monde en volume d'eau ?", image="", gap=0F, explanation=""),
+
+            QCM(answers=listOf(Answer(isRight=true, answer="Qin Shi Huang"), Answer(isRight=false, answer="Qin Shi Huangdi"), Answer(isRight=false, answer="Liu Bang"), Answer(isRight=false, answer="Han Wudi")), id="histoire_17", type="qcm_4", category="histoire", level=5, question="Qui était le premier empereur de Chine ?", image="", gap=0F, explanation=""),
+
+            QCM(answers=listOf(Answer(isRight=true, answer="Louis-Napoléon Bonaparte"), Answer(isRight=false, answer="Adolphe Thiers"), Answer(isRight=false, answer="Jules Grévy"), Answer(isRight=false, answer="Louis-Philippe")), id="histoire_34", type="qcm_4", category="histoire", level=4, question="Qui a été élu président de la République française lors de la première élection présidentielle en 1848 ?", image="", gap=0F, explanation=""),
+
+            QCM(answers=listOf(Answer(isRight=false, answer="Auguste"), Answer(isRight=false, answer="Néron"), Answer(isRight=true, answer="Vespasien"), Answer(isRight=false, answer="Trajan")), id="histoire_2", type="qcm_4", category="histoire", level=4, question="Quel empereur romain a ordonné la construction du Colisée ?", image="", gap=0F, explanation=""),
+
+            QCM(answers=listOf(Answer(isRight=true, answer="États-Unis"), Answer(isRight=false, answer="Canada"), Answer(isRight=false, answer="Australie"), Answer(isRight=false, answer="Argentine")), id="geographie_17", type="qcm_4", category="géographie", level=2, question="Dans quel pays se trouve le parc national de Yellowstone ?", image="", gap=0F, explanation=""),
+
+            QCM(answers=listOf(Answer(isRight=false, answer="Lac Supérieur"), Answer(isRight=false, answer="Lac Victoria"), Answer(isRight=true, answer="Lac Baïkal"), Answer(isRight=false, answer="Lac Tanganyika")), id="geographie_19", type="qcm_4", category="géographie", level=5, question="Quel est le plus grand lac du monde en volume d'eau ?", image="", gap=0F, explanation="")
+
         )
     }
 
@@ -465,12 +476,22 @@ class InGameViewModel() : ViewModel() {
     private val _questions = MutableLiveData<List<QCM>>()
     val questions: LiveData<List<QCM>> = _questions
 
+    var nbQuestion = 0
+
+    private val _questionState = MutableStateFlow(true)  // Initial state
+    val questionState: StateFlow<Boolean> = _questionState.asStateFlow()
+
     private val _round = MutableLiveData<Int>()
     val round: LiveData<Int> = _round
 
     val displayFunction = MutableStateFlow(false)
 
     private var alreadyAnswered = false
+
+
+    fun updateQuestionState(){
+        _questionState.value = !questionState.value
+    }
 
     fun fetchPlayers(gameId: String) {
         val gameRef = db.getReference("games/$gameId")
@@ -506,27 +527,7 @@ class InGameViewModel() : ViewModel() {
         })
     }
 
-    fun fetchAnswers(gameId: String){
-        //need to fetch the answers because isRight doesn't exist, it's right in the DataBase
-    }
 
-    fun fetchQuestions2(gameId: String) {
-        val questionsRef = db.getReference("games/$gameId/questions")
-        questionsRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val fetchedQuestions = mutableListOf<QCM>()
-                for (child in snapshot.children) {
-                    val question = child.getValue(QCM::class.java)
-                    question?.let { fetchedQuestions.add(it) }
-                }
-                _questions.value = fetchedQuestions
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Timber.e("InGameViewModel", "Failed to fetch questions: ${error.message}")
-            }
-        })
-    }
 
     fun fetchQuestions(gameId: String){
         val questionsRef = db.getReference("games/$gameId/questions")
@@ -600,7 +601,7 @@ class InGameViewModel() : ViewModel() {
                 } else if (currentValue > 0) {
                     mutableData.value = currentValue - 1
                     if (mutableData.value == 0){
-                        setFutureGameStartTime(gameId,5000)
+                        //setFutureGameStartTime(gameId,5000)
                     }
                 }
                 // Si la valeur actuelle est déjà à 0 ou moins, elle n'est pas changée.
@@ -617,24 +618,6 @@ class InGameViewModel() : ViewModel() {
         })
     }
 
-    fun setFutureGameStartTime(gameId: String, delayInMillis: Long) {
-        val gameRef = db.getReference("games").child(gameId).child("gameStartTime")
-
-        // Demander le timestamp serveur
-        gameRef.setValue(ServerValue.TIMESTAMP).addOnSuccessListener {
-            gameRef.addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val serverTime = snapshot.getValue(Long::class.java) ?: 0
-                    val futureStartTime = serverTime + delayInMillis
-                    gameRef.setValue(futureStartTime)
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    println("Error getting server time: ${error.message}")
-                }
-            })
-        }
-    }
 
 
     fun monitorGameStartTimeAndStart(gameId: String) {
@@ -683,8 +666,8 @@ class InGameViewModel() : ViewModel() {
                     // Supprime l'écouteur si la valeur est nulle ou moins
 
                     waitingPlayerRef.removeEventListener(this)
-                    displayFunction.value = false
-                    monitorGameStartTimeAndStart(gameId)
+                    displayFunction.value = true
+                    //monitorGameStartTimeAndStart(gameId)
                 }
             }
 
@@ -719,7 +702,7 @@ class InGameViewModel() : ViewModel() {
                                     playerSnapshot.child("score").getValue(Int::class.java) ?: 0
                                 if (playerId != null) {
                                     playersRef.child(playerId).child("score")
-                                        .setValue(currentscore + 1)
+                                        .setValue(currentscore + (questions.value!![nbQuestion].level * 4))
                                         .addOnSuccessListener {
                                             println("Score mis à jour avec succès pour le joueur $playerId")
                                         }
@@ -742,8 +725,15 @@ class InGameViewModel() : ViewModel() {
                 })
             }
 
-            monitorWaitingAnswerPlayer(gameId)
-            decrementWaitingAnswerPlayer(gameId)
+            if(nbQuestion == 4) {
+                monitorWaitingAnswerPlayer(gameId)
+                decrementWaitingAnswerPlayer(gameId)
+            }
+            else{
+                nbQuestion+=1
+                _questionState.value=false
+                alreadyAnswered=false
+            }
 
         }
     }
@@ -984,8 +974,18 @@ fun DisplayQuestion(gameViewModel: InGameViewModel, gameId: String, qcm: QCM, us
 
 @Composable
 fun ShowQuestion(gameViewModel: InGameViewModel, gameId: String, user: User?){
+    val questionState by gameViewModel.questionState.collectAsState()
     Background()
-    DisplayQuestion(gameViewModel,gameId, qcm = gameViewModel.questions.value!![0],user)
+    when(questionState) {
+        true -> DisplayQuestion(
+            gameViewModel,
+            gameId,
+            qcm = gameViewModel.questions.value!![gameViewModel.nbQuestion],
+            user
+        )
+
+        false -> {gameViewModel.updateQuestionState();ShowQuestion(gameViewModel, gameId, user)}
+    }
 }
 
 @Composable

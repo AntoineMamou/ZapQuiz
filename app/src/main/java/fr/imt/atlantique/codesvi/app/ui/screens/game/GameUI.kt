@@ -93,6 +93,7 @@ import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.math.abs
 
 
 val  fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
@@ -302,12 +303,15 @@ fun ModeDeJeu() {
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var job: Job? = null
-    val itemWidth = 390.dp // Largeur de chaque élément
+
     //REGLER LE PROBLEME POUR ACCEDER A LA TAILLE DE L'ECRAN DU JOUEUR
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     //val screenWidth = 400.dp
-    val spacing = (screenWidth - itemWidth) / 2 + 5.dp
-
+    val itemWidth = screenWidth - 10.dp // Largeur de chaque élément
+    var spacing =  (screenWidth - itemWidth) / 2 + 5.dp
+    if (spacing < 0.dp){
+        spacing *= -1
+    }
 
     LazyRow(
         verticalAlignment = Alignment.CenterVertically,
