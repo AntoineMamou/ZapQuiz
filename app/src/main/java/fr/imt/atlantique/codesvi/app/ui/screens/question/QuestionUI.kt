@@ -43,10 +43,12 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,6 +61,7 @@ import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.Answer
 import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
 import fr.imt.atlantique.codesvi.app.data.model.QCM
+import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -204,6 +207,14 @@ fun ProgressBar(coeur: Int, serieQuestion: Int) {
 @Composable
 fun PanneauQuestion(Hauteur: Int, Largeur: Int, Description: String){
 
+    var colorpannel = MaterialTheme.colorScheme.secondary
+    var colortxt = Color.White
+    println(GoldenQuestion)
+    if(GoldenQuestion){
+        colorpannel = Color.Yellow
+        colortxt = Color.Black
+    }
+
     Column ( modifier = Modifier
         .padding(top = 140.dp)
         .fillMaxWidth(),
@@ -216,7 +227,7 @@ fun PanneauQuestion(Hauteur: Int, Largeur: Int, Description: String){
             modifier = Modifier
                 .width(Largeur.dp)
                 .height(Hauteur.dp)
-                .background(color = MaterialTheme.colorScheme.secondary)
+                .background(color = colorpannel)
                 .clip(RectangleShape)
         ) {
 
@@ -234,7 +245,7 @@ fun PanneauQuestion(Hauteur: Int, Largeur: Int, Description: String){
 
                 Text(
                     text = Description,
-                    color = Color.White,
+                    color = colortxt,
                     fontFamily = fontPrincipale,
                     fontSize = 25.sp,
                     modifier = Modifier
@@ -712,6 +723,11 @@ fun questionGeneration(): QCM? {
     val qcm = qcmState.value
 
 
+    if (qcm != null) {
+        GoldenQuestion = qcm.level == 5
+    }
+
+
     return qcm
 }
 
@@ -790,14 +806,24 @@ fun QuestionVraiFaux(onClick: () -> Unit, qcm: QCM) {
 
     }
 
-fun textverification(user_answer : String, list_answers : List<Answer>): Boolean {
+fun textverification(user_answer : String, list_answers : List<Answer>, gap : Float): Boolean {
 
     val answer = user_answer.lowercase()
+
+    if (answer.isNullOrEmpty()) {
+        return false
+    }
+
+
     for (answerItem in list_answers) {
-        // Vérifier si la réponse de l'utilisateur correspond à la réponse actuelle de la liste
-        if (answer == answerItem.answer.lowercase()) {
-            // Si une correspondance est trouvée, mettre reponse à vrai et sortir de la boucle
-            return true
+        if (gap.toDouble() != 0.0) {
+            if (answer.toFloat() in (answerItem.answer.toInt() - gap)..(answerItem.answer.toInt() + gap)) {
+                return true
+            }
+        }else {
+            if (answer == answerItem.answer.lowercase()) {
+                return true
+            }
         }
     }
     // Si aucune correspondance n'est trouvée, mettre reponse à faux
@@ -850,7 +876,7 @@ fun QuestionText(onClick: () -> Unit, qcm : QCM) {
             horizontalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxWidth()
         ){
-            BoutonQCM("Envoyer", onClick, textverification(textValue,liste))
+            BoutonQCM("Envoyer", onClick, textverification(textValue,liste, qcm.gap))
         }
     }
 }
@@ -860,53 +886,48 @@ fun QuestionText(onClick: () -> Unit, qcm : QCM) {
 #          GENERATION DU MENU DE FIN DE PARTIE   #
 ##################################################
 */
-@SuppressLint("UnrememberedMutableState")
+
 @Composable
-fun GameOver(
+fun EndGameScreen(
     navController: NavHostController,
     viewModel: GameViewModel,
     victoire: Boolean
 ) {
+    val windowWidth = 250.dp
+    val windowHeight = 350.dp
 
+    Background()
     Column(
         modifier = Modifier
-            .padding(top = 50.dp)
-            .fillMaxWidth(),
-
-        verticalArrangement = Arrangement.Center,
+            .fillMaxSize()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-
-        ) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(bottom = 20.dp, end = 10.dp)
-
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.coeur),
-                contentDescription = "fermer", // Indiquez une description si nécessaire
-                modifier = Modifier.size(250.dp) // Ajuster la taille de l'image selon vos besoins
-            )
-        }
-
-
+        verticalArrangement = Arrangement.Center
+    ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp)
-                .background(color = Color.Red)
+                .size(windowWidth, windowHeight)
+                .border(5.dp, colorResource(id = R.color.yellow_1), RoundedCornerShape(15.dp))
+                .background(colorResource(id = R.color.blue_2), RoundedCornerShape(15.dp))
+                .padding(24.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
             ) {
+                Image(
+                    painter = painterResource(id = R.drawable.victoire),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(128.dp)
+                        .padding(bottom = 5.dp),
+                    contentScale = ContentScale.Crop
+                )
                 if(victoire){
                     Text(
-                        text = "Vous avez gagnez",
-                        color = Color.White,
+                        text = "Vous avez gagné",
+                        color = Color.Green,
                         fontFamily = fontPrincipale,
                         fontSize = 25.sp,
 
@@ -915,122 +936,102 @@ fun GameOver(
                 }else {
                     Text(
                         text = "Vous avez perdu",
-                        color = Color.White,
+                        color = Color.Red,
                         fontFamily = fontPrincipale,
                         fontSize = 25.sp,
 
                         // Aligner le texte au centre de la Row
                     )
                 }
-            }
-        }
-        Spacer(modifier = Modifier.height(20.dp))
 
-        Box(
-            modifier = Modifier
-                .width(300.dp)
-                .height(100.dp)
-                .background(color = MaterialTheme.colorScheme.secondary)
-                .border(width = 2.dp, color = MaterialTheme.colorScheme.primary) // Ajout de la bordure
-        ) {
-            Column {
-
-
+                Text(
+                    text = "$NombreQuestion questions réussis",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "$NombreQuestion questions réussis",
-                        color = Color.White,
-                        fontFamily = fontPrincipale,
-                        fontSize = 15.sp,
-
-                        // Aligner le texte au centre de la Row
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 ) {
                     Text(
                         text = "$GoldenQuestionpass golden questions réussis",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Medium,
                         color = Color.White,
-                        fontFamily = fontPrincipale,
-                        fontSize = 15.sp,
-
-                        // Aligner le texte au centre de la Row
+                        fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Image(
+                        painter = painterResource(id = R.drawable.couronne_laurier), // Remplacez par votre ressource d'image pour les trophées
+                        contentDescription = null,
+                        modifier = Modifier.size(50.dp)
                     )
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${NombreQuestion*5} coins gagnés",
+                        text = "Pièces: ${NombreQuestion*5}",
+                        fontSize = 24.sp,
                         color = Color.White,
-                        fontFamily = fontPrincipale,
-                        fontSize = 15.sp,
-
-                        // Aligner le texte au centre de la Row
+                        fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Image(
+                        painter = painterResource(id = R.drawable.piece), // Remplacez par votre ressource d'image pour les pièces
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp)
                     )
                 }
             }
         }
+
         Spacer(modifier = Modifier.height(20.dp))
 
-        Row(modifier = Modifier.fillMaxSize(),
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically){
+            modifier = Modifier
+                .width(300.dp)
+                .height(70.dp)
+                .background(color = MaterialTheme.colorScheme.secondary, RoundedCornerShape(15.dp))
+                .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(15.dp))
+                .clickable(onClick = {
+                    navController.navigate(RootScreen.Home.route);
+                    viewModel.changeAnyAtomicV2(
+                        game_played = user!!.game_played + 1,
+                        //multiplicateur de money en fonction de difficulté ??
+                        money = user!!.money + NombreQuestion * 5
+                    )
+                    GoldenQuestionpass = 0
+                    QuestionIndexList = mutableStateOf(IntArray(20)  { it }.toMutableList())
 
-            Box(
-                modifier = Modifier
-                    .size(180.dp, 150.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.secondary,
-                        RoundedCornerShape(20.dp)
-                    )
-                    .border(
-                        5.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                        RoundedCornerShape(20.dp)
-                    )
-                    .clickable(onClick = {
-                        navController.navigate(RootScreen.Home.route);
-                        viewModel.changeAnyAtomicV2(
-                            game_played = user!!.game_played + 1,
-                            //multiplicateur de money en fonction de difficulté ??
-                            money = user!!.money + NombreQuestion * 5
-                        )
+                    if(victoire) {
+                        NombreQuestion = -1
+                        NombreDeVies = 3
+
+                    } else {
+
                         NombreQuestion = 0
                         NombreDeVies = 4
-                        GoldenQuestionpass = 0
-                        QuestionIndexList = mutableStateOf(IntArray(20) { it }.toMutableList())
 
-
-                    })
-
-
-            ) {
-                Text(
-                    text = "Retour au menu",
-                    color = Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.align(Alignment.Center),
-                    fontFamily = fontPrincipale
-                )
-            }
-
-
+                }} )
+        ){
+            Text(
+                text = "Retourner au menu",
+                color = Color.White,
+                fontSize = 25.sp,
+                fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
+            )
         }
-
-
-
-
     }
 }
+
+
 
 
 /*
@@ -1047,6 +1048,7 @@ fun Global(
 
 
     var currentContent by remember { mutableStateOf(0) }
+
 
 
 
@@ -1104,9 +1106,9 @@ fun Global(
 
         ProgressBar(NombreDeVies, NombreQuestion) } else {
             if (NombreDeVies == 0) {
-                GameOver(navController, viewModel, false)
+                EndGameScreen(navController, viewModel, false)
             } else {
-                GameOver(navController, viewModel, true)
+                EndGameScreen(navController, viewModel, true)
             }
             currentContent = 2
         }
