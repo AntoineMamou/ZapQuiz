@@ -3,6 +3,8 @@ package fr.imt.atlantique.codesvi.app.ui.screens.game
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import android.media.MediaPlayer
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,6 +51,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
@@ -55,6 +59,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,7 +72,17 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+
+import dagger.hilt.android.internal.Contexts.getApplication
+import fr.imt.atlantique.codesvi.app.data.model.Answer
+import fr.imt.atlantique.codesvi.app.data.model.MusicControl
+import fr.imt.atlantique.codesvi.app.data.model.QCM
+import fr.imt.atlantique.codesvi.app.data.model.SoundEffect
+
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
+import fr.imt.atlantique.codesvi.app.data.model.MusicManager
+
 import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
@@ -77,6 +96,7 @@ import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlin.math.abs
 
 
 val  fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
@@ -305,12 +325,15 @@ fun ModeDeJeu() {
     val scrollState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     var job: Job? = null
-    val itemWidth = 390.dp // Largeur de chaque élément
+
     //REGLER LE PROBLEME POUR ACCEDER A LA TAILLE DE L'ECRAN DU JOUEUR
     val screenWidth = LocalConfiguration.current.screenWidthDp.dp
     //val screenWidth = 400.dp
-    val spacing = (screenWidth - itemWidth) / 2 + 5.dp
-
+    val itemWidth = screenWidth - 10.dp // Largeur de chaque élément
+    var spacing =  (screenWidth - itemWidth) / 2 + 5.dp
+    if (spacing < 0.dp){
+        spacing *= -1
+    }
 
     LazyRow(
         verticalAlignment = Alignment.CenterVertically,
@@ -382,7 +405,7 @@ fun ModeDeJeu() {
                         0 -> {
                             // Load image for index 1
                             Image(
-                                painter = painterResource(R.drawable.multi_main),
+                                painter = painterResource(R.drawable.duel_main),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -420,7 +443,7 @@ fun ModeDeJeu() {
                         2 -> {
                             // Load image for index 3
                             Image(
-                                painter = painterResource(R.drawable.duel_main),
+                                painter = painterResource(R.drawable.multi_main),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -557,6 +580,7 @@ fun StartButton(navController: NavHostController) {
 
 @Composable
 fun StartButton2(navController: NavHostController){
+    val context = LocalContext.current
     Row(verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
         modifier = Modifier
@@ -577,15 +601,31 @@ fun StartButton2(navController: NavHostController){
             .clickable(onClick = {
                 if (currentIndex <= 0) {
                     currentIndex = 0
+                    val soundEffect = MediaPlayer.create(context, R.raw.game_start)
+                    soundEffect.start()
+                    soundEffect.setOnCompletionListener { mp ->
+                        mp.release()
+                    }
                     navController.navigate(HomeRootScreen.Duel.route)
                 }
 
                 if (currentIndex == 1) {
+
+                    val soundEffect = MediaPlayer.create(context, R.raw.game_start)
+                    soundEffect.start()
+                    soundEffect.setOnCompletionListener { mp ->
+                        mp.release()
+                    }
                     navController.navigate(HomeRootScreen.Solo.route)
                 }
 
                 if (currentIndex >= 2) {
                     currentIndex = 2
+                    val soundEffect = MediaPlayer.create(context, R.raw.game_start)
+                    soundEffect.start()
+                    soundEffect.setOnCompletionListener { mp ->
+                        mp.release()
+                    }
                     navController.navigate(HomeRootScreen.Multi.route)
                 }
             })
@@ -666,6 +706,10 @@ fun Centre2(navController: NavHostController){
 
 @Composable
 fun SettingsRow(text: String) {
+    val context= LocalContext.current
+    val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -679,12 +723,21 @@ fun SettingsRow(text: String) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        var checked by remember { mutableStateOf(true) }
+        var checked by remember { mutableStateOf(sharedPreferences.getBoolean(text,true)) }
 
         Switch(
             checked = checked,
             onCheckedChange = {
-                checked = it
+                checked = it;
+                val editor = sharedPreferences.edit();
+                editor.putBoolean(text, it);
+                editor.apply();
+                if(it) {
+                    MusicManager.playMusic(context)
+                }
+                else{
+                    MusicManager.stopMusic()
+                }
             },
             modifier = Modifier.size(40.dp)
         )
@@ -1404,140 +1457,7 @@ fun ProfilWindow(
 }
 
 
-class GameViewModel : ViewModel() {
-    private val _userState = MutableStateFlow<User?>(null)
-    val userState: StateFlow<User?> = _userState.asStateFlow()
 
-    fun loadUser(username: String?) {
-        viewModelScope.launch {
-            username?.let {
-                val user = getUserInfoDatabase(it)
-                _userState.value = user
-            }
-        }
-    }
-
-
-    fun changeAnyAtomicV2(
-        trophies: Int? = _userState.value?.trophies,
-        playerIcon: String? = _userState.value?.playerIcon,
-        title: String? = _userState.value?.title,
-        connectionState: Boolean? = _userState.value?.connectionState,
-        victory: Int? = _userState.value?.victory,
-        game_played: Int? = _userState.value?.game_played,
-        peak_trophy: Int? = _userState.value?.peak_trophy,
-        favorite_category: String? = _userState.value?.favorite_category,
-        money: Int? = _userState.value?.money,
-        newAvailableIcon: String? = null,
-        newAvailableTitle: String? = null,
-    ) {
-        getUserId(user!!.username) { userId ->
-            val database =
-                FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
-            val usersRef = database.getReference("utilisateurs/$userId")
-
-            usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    var existingUser = dataSnapshot.getValue(User::class.java)
-
-                    if (existingUser != null) {
-                        var isUpdated = false
-
-                        if (existingUser.playerIcon != playerIcon) {
-                            if (playerIcon != null) {
-                                existingUser.playerIcon = playerIcon
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.title != title) {
-                            if (title != null) {
-                                existingUser.title = title
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.victory != victory) {
-                            if (victory != null) {
-                                existingUser.victory = victory
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.game_played != game_played) {
-                            if (game_played != null) {
-                                existingUser.game_played = game_played
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.peak_trophy != peak_trophy) {
-                            if (peak_trophy != null) {
-                                existingUser.peak_trophy = peak_trophy
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.favorite_category != favorite_category) {
-                            if (favorite_category != null) {
-                                existingUser.favorite_category = favorite_category
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.money != money) {
-                            if (money != null) {
-                                existingUser.money = money
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.connectionState != connectionState) {
-                            if (connectionState != null) {
-                                existingUser.connectionState = connectionState
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.trophies != trophies) {
-                            if (trophies != null) {
-                                existingUser.trophies = trophies
-                                isUpdated = true
-                            }
-                        }
-
-                        if (newAvailableIcon != null && !existingUser.availableIcons.contains(newAvailableIcon)) {
-                            existingUser.availableIcons =
-                                existingUser.availableIcons + newAvailableIcon
-                            isUpdated = true
-                        }
-
-                        if (newAvailableTitle != null && !existingUser.availableTitles.contains(newAvailableTitle)) {
-                            existingUser.availableTitles =
-                                existingUser.availableTitles + newAvailableTitle
-                            isUpdated = true
-                        }
-
-                        if (isUpdated) {
-                            usersRef.setValue(existingUser)
-                                .addOnSuccessListener {
-                                    // Update the user state only if Firebase update was successful
-                                    _userState.value = existingUser
-                                }
-                                .addOnFailureListener { e ->
-                                    println("Error updating user: $e")
-                                }
-                        }
-                    }
-                }
-
-                override fun onCancelled(databaseError: DatabaseError) {
-                    println("Error fetching user: $databaseError")
-                }
-            })
-        }
-    }
-}
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
@@ -1546,13 +1466,27 @@ fun GameScreen(
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
+
+
+
+    MusicControl()
     val viewModel: GameViewModel = viewModel()
     val context = LocalContext.current
     val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
     }
 
+
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
+    }
+
+
     val userState by viewModel.userState.collectAsState()
+
     val username = sharedPreferences.getString("username", "")
 
     // Déclenchez le chargement de l'utilisateur
@@ -1609,3 +1543,4 @@ fun GameScreen(
         DisplayTitles(titleList = user!!.availableTitles, onClose = {changeTitleVisible = false}, viewModel)
     }
 }
+

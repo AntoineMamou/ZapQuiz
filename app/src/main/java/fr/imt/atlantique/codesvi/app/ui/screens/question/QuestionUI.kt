@@ -2,6 +2,7 @@ package fr.imt.atlantique.codesvi.app.ui.screens.question
 
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,13 +57,14 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.Answer
+import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
 import fr.imt.atlantique.codesvi.app.data.model.QCM
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
-import fr.imt.atlantique.codesvi.app.ui.screens.game.GameViewModel
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
+import timber.log.Timber
 import java.text.Normalizer
 import java.util.Timer
 import java.util.TimerTask
@@ -704,7 +706,6 @@ fun questionGeneration(): QCM? {
             question = questionFromDatabase(randomcategory, QuestionIndex)
         }
         qcmState.value = question
-        println(question)
 
     }
 
@@ -1143,6 +1144,13 @@ fun QuestionScreen(
     navController: NavHostController
 ) {
     val viewModel = GameViewModel()
+
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
+    }
 
     Background()
     Global(navController, viewModel)

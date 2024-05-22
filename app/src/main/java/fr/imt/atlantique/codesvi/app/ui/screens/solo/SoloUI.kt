@@ -1,6 +1,11 @@
 
+import android.widget.Button
+import androidx.activity.compose.BackHandler
+
+
 import android.content.Context
 import android.content.SharedPreferences
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,10 +47,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
-import fr.imt.atlantique.codesvi.app.ui.screens.game.GameViewModel
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import fr.imt.atlantique.codesvi.app.ui.screens.solo.SoloState
+
+
+import timber.log.Timber
+
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+
 
 
 val customFontFamily = FontFamily(
@@ -376,8 +391,20 @@ fun ExitButton(
     ) {
         val context = LocalContext.current
 
+
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
+    }
+
+    // pop up box
+    var isPopUpVisible by remember { mutableStateOf(false) }
+
         var titleClickCount = loadClickCounts(context)
         val preferedCategory = getTitleWithMostClick(titleClickCount)
+
 
         val viewModel = GameViewModel()
         val userState by viewModel.userState.collectAsState()
@@ -390,8 +417,7 @@ fun ExitButton(
         BoxesGrid(navController, titleClickCount, context)
 
 
-        // pop up box
-        var isPopUpVisible by remember { mutableStateOf(false) }
+
 
         // Function to trigger appearance of the pop-up box
         val triggerPopUp = { isPopUpVisible = true }

@@ -69,9 +69,10 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
+import fr.imt.atlantique.codesvi.app.data.model.MusicControl
 import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.screens.game.DisplayTitles
-import fr.imt.atlantique.codesvi.app.ui.screens.game.GameViewModel
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ScrollableColumnWithImages
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
@@ -84,6 +85,7 @@ import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -614,6 +616,7 @@ fun ProfileScreen(
     modifier: Modifier = Modifier,
     navController : NavHostController
 ) {
+    MusicControl()
 
     val tag: String? = "MyAppTag"
     Log.d(tag ?: "DefaultTag", "Bonjour")
@@ -623,7 +626,16 @@ fun ProfileScreen(
         context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
     }
 
+
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
+    }
+
     val gameModel = GameViewModel()
+
 
     val userState by gameModel.userState.collectAsState()
     val username = sharedPreferences.getString("username", "")

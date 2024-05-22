@@ -3,6 +3,7 @@ package fr.imt.atlantique.codesvi.app.ui.screens.shop
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -45,8 +46,18 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
+
+
+import fr.imt.atlantique.codesvi.app.data.model.MusicControl
+import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
+
+import fr.imt.atlantique.codesvi.app.data.model.User
+
+
 import fr.imt.atlantique.codesvi.app.ui.screens.game.DisplayTitles
-import fr.imt.atlantique.codesvi.app.ui.screens.game.GameViewModel
+
+
 import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ScrollableColumnWithImages
@@ -55,6 +66,16 @@ import fr.imt.atlantique.codesvi.app.ui.screens.game.getAnyImageId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUser
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
+
+
+import timber.log.Timber
+
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+
 
 data class IconModel(val iconSourceName: String, val iconName: String, val iconPrice: Int,val iconFunction: (IconModel)->Unit)
 @Composable
@@ -391,10 +412,21 @@ fun ShopScreen(
     modifier: Modifier = Modifier,
     navController : NavHostController
 ) {
+
+    MusicControl()
+
     val viewModel = GameViewModel()
+
     val context = LocalContext.current
     val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+    }
+
+    /*empeche le retour en arrière*/
+    BackHandler(enabled = true) {
+        // Ici, vous pouvez ajouter une logique pour décider quand et comment empêcher le retour
+        // Laisser ce bloc vide empêchera le retour arrière
+        Timber.d("retour empêché")
     }
 
 
