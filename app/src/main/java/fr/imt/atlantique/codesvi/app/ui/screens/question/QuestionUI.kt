@@ -27,6 +27,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,7 +130,7 @@ var Reponse by mutableStateOf(true)
 var NombreQuestion = -1
 var NombreDeVies = 3
 
-var QuestionIndexList = mutableStateOf(IntArray(10)  { it }.toMutableList())
+var QuestionIndexList = mutableStateOf(IntArray(20)  { it }.toMutableList())
 // Recuperer la taille de la liste
 
 /*
@@ -363,22 +364,31 @@ fun BoutonQCM(textbouton: String, onClick: () -> Unit, reponsebonne: Boolean) {
 */
 
 var ScreenTransitor = false
+var GoldenQuestionpass = 0
+var GoldenQuestion = false
 
 @Composable
 fun ChangerQuestion(onClick: () -> Unit) {
     if(ScreenTransitor) {
         if(Reponse) {
             TransitorScreen(reponsebonne = true, onClick)
+            if(GoldenQuestion){
+                GoldenQuestionpass++
+            }
         } else {
             TransitorScreen(reponsebonne = false, onClick)
         }
     } else {
         if (Reponse) {
-            GenererQuestion(onClick)
-            NombreQuestion += 1
+            if(QuestionIndexList.value.size == null) {
+
+            }else {
+                GenererQuestion(onClick)
+                NombreQuestion += 1
+            }
         } else if (!Reponse) {
             NombreDeVies = NombreDeVies - 1
-            if (NombreDeVies == 0) {
+            if (NombreDeVies == 0 || QuestionIndexList.value.size == null) {
 
             } else {
                 GenererQuestion(onClick)
@@ -440,18 +450,81 @@ fun TransitorScreen(reponsebonne: Boolean, onClick: () -> Unit) {
     }
 }
 
+@Composable
+fun startWindows(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp), // Vous pouvez ajuster le padding selon vos besoins
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(width = 200.dp, height = 75.dp)
+                .background(color = MaterialTheme.colorScheme.secondary, shape = RoundedCornerShape(20.dp))
+                .border(5.dp, color = MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(20.dp))
+                .clickable(onClick = {
+                    onClick()
+                    if (Reponse) {
+                        NombreQuestion -= 1
+                    } else {
+                        NombreDeVies += 1
+                    }
+                })
+        ) {
+            Text(
+                text = "Lancer la partie",
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.Center),
+                fontFamily = fontPrincipale
+            )
+        }
+    }
+}
+
+
 
 @Composable
 fun GenererQuestion(onClick: () -> Unit) {
 
-    val qcm = questionGeneration()
-    if (qcm != null) {
+    if(QuestionIndexList.value[0] == 1 && QuestionIndexList.value[1] == 2  ){
+        startWindows(onClick)
 
-        if(qcm.type == "qcm_4") { QuestionChoixMultiple(onClick, qcm) }
-        if(qcm.type == "vf") { QuestionVraiFaux(onClick, qcm) }
-        if(qcm.type == "input") { QuestionText(onClick, qcm) }
+    }else {
+
+        val qcm = questionGeneration()
+
+        if (qcm != null) {
+
+            if (qcm.type == "qcm_4") {
+                QuestionChoixMultiple(onClick, qcm)
+            }
+            if (qcm.type == "vf") {
+                QuestionVraiFaux(onClick, qcm)
+            }
+            if (qcm.type == "input") {
+                QuestionText(onClick, qcm)
+            }
+
+            if (qcm.level == 5) {
+                GoldenQuestion = true
+            } else {
+                GoldenQuestion = false
+            }
+        }
+    }
 
 
+    }
+
+
+fun generateNumber(difficultylower: Int, difficultyhigher: Int): Int {
+    val randomNumber = Math.random() // Génère un nombre aléatoire entre 0.0 (inclus) et 1.0 (exclus)
+    return if (randomNumber < 0.6) {
+        difficultylower // 80% de chance de retourner la difficulté inférieur
+    } else {
+        difficultyhigher // 20% de chance de retourner la difficulté supérieur
     }
 }
 
@@ -467,6 +540,7 @@ suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //ra
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                 for (questionSnapshot in dataSnapshot.children) {
                     val questionId = questionSnapshot.key?.toIntOrNull()
+
                     if (questionId == randomNumber) {
                         //val question = questionSnapshot.getValue(QCM::class.java)
 
@@ -478,7 +552,6 @@ suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //ra
                         val image = questionSnapshot.child("image").getValue(String::class.java)
                         val gap = questionSnapshot.child("gap").getValue(Float::class.java)
                         val explanation = questionSnapshot.child("explanation").getValue(String::class.java)
-
                         // Récupération de la liste des réponses
                         val answersList = ArrayList<Answer>()
                         val answersSnapshot = questionSnapshot.child("answers")
@@ -515,15 +588,26 @@ suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //ra
         }
     }
 }
-
-suspend fun getQuestionCategorySize(theme: String): Int {
+suspend fun ListIndexQuestionFromDatabase(theme: String, difficulty: Int): List<Int> {
     return suspendCancellableCoroutine { continuation ->
         val questionsRef = databaseGlobal.getReference("questions/$theme")
 
         val valueEventListener = object : ValueEventListener {
             override fun onDataChange(dataSnapshot: DataSnapshot) {
-                val categorySize = dataSnapshot.childrenCount
-                continuation.resume(categorySize.toInt())
+                val indexList = mutableListOf<Int>()
+
+                for (questionSnapshot in dataSnapshot.children) {
+                    val questionId = questionSnapshot.key?.toIntOrNull()
+                    val difficultyData = questionSnapshot.child("level").getValue(Int::class.java)
+
+                    if (difficulty == difficultyData) {
+                        questionId?.let {
+                            indexList.add(it)
+                        }
+                    }
+                }
+
+                continuation.resume(indexList)
             }
 
             override fun onCancelled(databaseError: DatabaseError) {
@@ -533,11 +617,59 @@ suspend fun getQuestionCategorySize(theme: String): Int {
 
         questionsRef.addListenerForSingleValueEvent(valueEventListener)
 
-        // Annuler l'écouteur de valeurs lorsque la coroutine est annulée
         continuation.invokeOnCancellation {
             questionsRef.removeEventListener(valueEventListener)
         }
     }
+}
+
+
+
+// recuperer aleatoirement une question de difficulté
+suspend fun QuestionIndexListGenerator(categorie: String): MutableState<MutableList<Int>> {
+    val list = mutableStateOf(IntArray(20) { it }.toMutableList())
+    if (categorie != "tout_theme") {
+
+
+        // Récupération des listes de questions par difficulté
+        val list_diff_1 = ListIndexQuestionFromDatabase(categorie, 1).toMutableList()
+        val list_diff_2 = ListIndexQuestionFromDatabase(categorie, 2).toMutableList()
+        val list_diff_3 = ListIndexQuestionFromDatabase(categorie, 3).toMutableList()
+        val list_diff_4 = ListIndexQuestionFromDatabase(categorie, 4).toMutableList()
+        val list_diff_5 = ListIndexQuestionFromDatabase(categorie, 5).toMutableList()
+
+        // Fonction pour choisir une question aléatoire d'une liste donnée
+        fun chooseRandomQuestionAndRemove(list: MutableList<Int>): Int? {
+            if (list.isEmpty()) return null
+            val randomIndex = Random.nextInt(list.size)
+            return list.removeAt(randomIndex)
+        }
+
+        for (i in 1..20) {
+            val difficulty = when {
+                i <= 5 -> generateNumber(1, 2)
+                i in 6..10 -> generateNumber(2, 3)
+                i in 11..15 -> generateNumber(3, 4)
+                i in 16..20 -> generateNumber(4, 5)
+                else -> 1 // Default case, shouldn't be reached
+            }
+
+            val selectedQuestionIndex = when (difficulty) {
+                1 -> chooseRandomQuestionAndRemove(list_diff_1)
+                2 -> chooseRandomQuestionAndRemove(list_diff_2)
+                3 -> chooseRandomQuestionAndRemove(list_diff_3)
+                4 -> chooseRandomQuestionAndRemove(list_diff_4)
+                5 -> chooseRandomQuestionAndRemove(list_diff_5)
+                else -> null
+            }
+
+            selectedQuestionIndex?.let { list.value[i - 1] = it }
+        }
+    }else {
+        list.value = List(20) { Random.nextInt(1, 51) }.toMutableList()
+    }
+
+    return list
 }
 
 fun RandomCategorie(): String {
@@ -558,20 +690,25 @@ fun RandomCategorie(): String {
 @OptIn(DelicateCoroutinesApi::class)
 @Composable
 fun questionGeneration(): QCM? {
-    val randomIndex = remember { Random.nextInt(QuestionIndexList.value.size - 1) }
-    val randomQuestionIndex = remember { QuestionIndexList.value[randomIndex] }
+
+
+    val QuestionIndex = remember { QuestionIndexList.value[0] }
     val qcmState = remember { mutableStateOf<QCM?>(null) }
 
-    LaunchedEffect(randomIndex) {
-        QuestionIndexList.value.removeAt(randomIndex)
+
+    LaunchedEffect(QuestionIndex) {
+        QuestionIndexList.value.removeAt(0)
+        println(QuestionIndexList)
         var question : QCM?
 
+
+
         if (categorie != "tout_theme") {
-            question = questionFromDatabase(categorie, randomQuestionIndex)
+            question = questionFromDatabase(categorie, QuestionIndex)
 
         } else {
             val randomcategory = RandomCategorie()
-            question = questionFromDatabase(randomcategory, randomQuestionIndex)
+            question = questionFromDatabase(randomcategory, QuestionIndex)
         }
         qcmState.value = question
         println(question)
@@ -732,10 +869,11 @@ fun QuestionText(onClick: () -> Unit, qcm : QCM) {
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun GameOver(
-    navController : NavHostController,
-    viewModel: GameViewModel
+    navController: NavHostController,
+    viewModel: GameViewModel,
+    victoire: Boolean
 ) {
-    QuestionIndexList = mutableStateOf( IntArray(20)  { it }.toMutableList())
+
     Column(
         modifier = Modifier
             .padding(top = 50.dp)
@@ -771,14 +909,25 @@ fun GameOver(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = "Vous avez perdu",
-                    color = Color.White,
-                    fontFamily = fontPrincipale,
-                    fontSize = 25.sp,
+                if(victoire){
+                    Text(
+                        text = "Vous avez gagnez",
+                        color = Color.White,
+                        fontFamily = fontPrincipale,
+                        fontSize = 25.sp,
 
-                    // Aligner le texte au centre de la Row
-                )
+                        // Aligner le texte au centre de la Row
+                    )
+                }else {
+                    Text(
+                        text = "Vous avez perdu",
+                        color = Color.White,
+                        fontFamily = fontPrincipale,
+                        fontSize = 25.sp,
+
+                        // Aligner le texte au centre de la Row
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(20.dp))
@@ -812,7 +961,7 @@ fun GameOver(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "0 golden questions réussis",
+                        text = "$GoldenQuestionpass golden questions réussis",
                         color = Color.White,
                         fontFamily = fontPrincipale,
                         fontSize = 15.sp,
@@ -859,11 +1008,12 @@ fun GameOver(
                         viewModel.changeAnyAtomicV2(
                             game_played = user!!.game_played + 1,
                             //multiplicateur de money en fonction de difficulté ??
-                            money = user!!.money + NombreQuestion*5
+                            money = user!!.money + NombreQuestion * 5
                         )
                         NombreQuestion = 0
                         NombreDeVies = 4
-
+                        GoldenQuestionpass = 0
+                        QuestionIndexList = mutableStateOf(IntArray(20) { it }.toMutableList())
 
 
                     })
@@ -1027,19 +1177,25 @@ fun Global(
 
     var currentContent by remember { mutableStateOf(0) }
 
+
+
+
     LaunchedEffect(currentContent){
-        if (NombreQuestion == 0) {
-            QuestionIndexList =  mutableStateOf(IntArray(getQuestionCategorySize(categorie))  { it }.toMutableList())
-            println("renitialisation")
+        if (NombreQuestion == 0 && NombreDeVies == 3) {
+            QuestionIndexList = QuestionIndexListGenerator(categorie)
+
         }
-        println(QuestionIndexList)
+
     }
+
+
 
     if (gameMode == "Solo") {
         var timer by remember { mutableStateOf(Timer()) }
         var time_spend by remember { mutableStateOf(0) }
 
-        if (NombreDeVies > 0){
+        if (NombreDeVies > 0 && QuestionIndexList.value.size > 0){
+
         DisposableEffect(Unit) {
             timer.scheduleAtFixedRate(object : TimerTask() {
                 override fun run() {
@@ -1068,20 +1224,28 @@ fun Global(
 
 
             if ((time_spend == 1500 || time_spend == 1501) && ScreenTransitor == false){
-                println("plus de temps")
+
                 Reponse = false
                 ScreenTransitor = true
                 currentContent = 1 - currentContent
             }
 
 
-        ProgressBar(NombreDeVies, NombreQuestion) } else { GameOver(navController, viewModel)
-        currentContent = 2}
+        ProgressBar(NombreDeVies, NombreQuestion) } else {
+            if (NombreDeVies == 0) {
+                GameOver(navController, viewModel, false)
+            } else {
+                GameOver(navController, viewModel, true)
+            }
+            currentContent = 2
+        }
+
 
 
 
 
     }
+
     if (gameMode == "Multi") {
         // Button to change the currentContent state
         // Display content based on currentContent state
@@ -1095,12 +1259,9 @@ fun Global(
 
 
     }
-    if (gameMode == "Duel") {
 
-
-    }
+    if (gameMode == "Duel") { }
 }
-
 
 
 
