@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,30 +44,29 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.R
+import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
+
 
 import fr.imt.atlantique.codesvi.app.data.model.MusicControl
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 
 import fr.imt.atlantique.codesvi.app.data.model.User
 
+
+import fr.imt.atlantique.codesvi.app.ui.screens.game.DisplayTitles
+
+
 import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
+import fr.imt.atlantique.codesvi.app.ui.screens.game.ScrollableColumnWithImages
 import fr.imt.atlantique.codesvi.app.ui.screens.game.SettingsWindow
-import fr.imt.atlantique.codesvi.app.ui.screens.game.addIconName
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getAnyImageId
-import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserId
-import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
-import fr.imt.atlantique.codesvi.app.ui.screens.game.loadIconNames
+import fr.imt.atlantique.codesvi.app.ui.screens.game.getUser
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
+
 
 import timber.log.Timber
 
@@ -74,6 +74,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
 
 
 data class IconModel(val iconSourceName: String, val iconName: String, val iconPrice: Int,val iconFunction: (IconModel)->Unit)
@@ -360,7 +361,7 @@ fun InfoBuyWindow(
                                 .size(30.dp)
                         )
                     }
-                    val buyable = isBuyable(icon, loadIconNames(context))
+                    val buyable = isBuyable(icon, user!!.availableIcons)
 
                     Row(verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center,
@@ -380,9 +381,9 @@ fun InfoBuyWindow(
 
                             .clickable(enabled = buyable, onClick = {
                                 viewModel.changeAnyAtomicV2(
-                                    money = user!!.money - icon.iconPrice
+                                    money = user!!.money - icon.iconPrice,
+                                    newAvailableIcon = icon.iconSourceName
                                 )
-                                addIconName(context, icon.iconSourceName)
                                 onClose()
                             })
 
@@ -403,136 +404,6 @@ fun InfoBuyWindow(
     }
 
 }
-
-
-// impossible de l'importer
-
-class GameViewModel : ViewModel() {
-    private val _userState = MutableStateFlow<User?>(null)
-    val userState: StateFlow<User?> = _userState.asStateFlow()
-
-    fun loadUser(username: String?) {
-        viewModelScope.launch {
-            username?.let {
-                val user = getUserInfoDatabase(it)
-                _userState.value = user
-            }
-        }
-    }
-
-
-    fun changeAnyAtomicV2(
-        trophies: Int? = _userState.value?.trophies,
-        playerIcon: String? = _userState.value?.playerIcon,
-        title: String? = _userState.value?.title,
-        connectionState: Boolean? = _userState.value?.connectionState,
-        victory: Int? = _userState.value?.victory,
-        game_played: Int? = _userState.value?.game_played,
-        peak_trophy: Int? = _userState.value?.peak_trophy,
-        favorite_category: String? = _userState.value?.favorite_category,
-        money: Int? = _userState.value?.money
-    ) {
-        getUserId(user!!.username) { userId ->
-            val database =
-                FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
-            val usersRef = database.getReference("utilisateurs/$userId")
-
-            usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(dataSnapshot: DataSnapshot) {
-                    var existingUser = dataSnapshot.getValue(User::class.java)
-
-                    if (existingUser != null) {
-                        var isUpdated = false
-
-
-                        if (existingUser.playerIcon != playerIcon) {
-                            if (playerIcon != null) {
-                                existingUser.playerIcon = playerIcon
-                                isUpdated = true
-                            }
-                        }
-
-
-                        if (existingUser.title != title) {
-                            if (title != null) {
-                                existingUser.title = title
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.victory != victory) {
-                            if (victory != null) {
-                                existingUser.victory = victory
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.game_played != game_played) {
-                            if (game_played != null) {
-                                existingUser.game_played = game_played
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.peak_trophy != peak_trophy) {
-                            if (peak_trophy != null) {
-                                existingUser.peak_trophy = peak_trophy
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.favorite_category != favorite_category) {
-                            if (favorite_category != null) {
-                                existingUser.favorite_category = favorite_category
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.money != money) {
-                            if (money != null) {
-                                existingUser.money = money
-                                isUpdated = true
-                            }
-                        }
-
-                        if (existingUser.connectionState != connectionState) {
-                            if (connectionState != null) {
-                                existingUser.connectionState = connectionState
-                            }
-                        }
-
-                        if (existingUser.trophies != trophies) {
-                            if (trophies != null) {
-                                existingUser.trophies = trophies
-                            }
-                        }
-
-                        if (isUpdated) {
-                            usersRef.setValue(existingUser)
-                                .addOnSuccessListener {
-                                    // Update the user state only if Firebase update was successful
-                                    _userState.value = existingUser
-                                }
-                                .addOnFailureListener { e ->
-                                    println("Error updating user: $e")
-                                }
-                        }
-                    }
-                }
-
-                override fun onCancelled(databaseError: DatabaseError) {
-                    println("Error fetching user: $databaseError")
-                }
-            })
-
-        }
-    }
-}
-
-
-
-
-
 
 
 @Composable
@@ -560,6 +431,7 @@ fun ShopScreen(
 
 
 
+
     //Permet de gérer l'affichage ou non de la fenêtre des paramètres
     var settingsModalVisible by remember { mutableStateOf(false) }
 
@@ -572,10 +444,12 @@ fun ShopScreen(
 
     //Permet de gérer l'affichage ou non de la fenêtre de profil
     var profilVisible by remember { mutableStateOf(false) }
+    var changeIconVisible by remember { mutableStateOf(false) }
+    var changeTitleVisible by remember { mutableStateOf(false) }
 
     // Afficher la fenêtre modale des paramètres si settingsModalVisible est vrai
     if (profilVisible) {
-        user?.let { ProfilWindow(onClose = { profilVisible = false }, it, false, {}) }
+        user?.let { ProfilWindow(onClose = { profilVisible = false }, it, false, {changeIconVisible = true}, {changeTitleVisible = true}) }
     }
 
 
@@ -604,12 +478,33 @@ fun ShopScreen(
         )
     }
 
+    val gameModel = GameViewModel()
 
 
-    // Déclenchez le chargement de l'utilisateur
-   LaunchedEffect(user!!.money) {
-        viewModel.loadUser(user!!.username)
+    if (changeIconVisible) {
+        ScrollableColumnWithImages(
+            user!!.availableIcons, onClose = { changeIconVisible = false }, gameModel
+        )
     }
+    if (changeTitleVisible) {
+        DisplayTitles(titleList = user!!.availableTitles, onClose = {changeTitleVisible = false}, viewModel)
+    }
+
+
+    val userState by viewModel.userState.collectAsState()
+    userState?.let { getUser(it) }
+
+    val username = sharedPreferences.getString("username", "")
+
+    // Problème d'update que je n'arrive pas a résoudre
+    //cette solution risque de créer un chargement infini / crash ?
+    LaunchedEffect(userState?.username,userState?.money,userState?.playerIcon,userState?.title, changeIconVisible, changeTitleVisible, infoBuyVisible
+    ) {
+        viewModel.loadUser(username)
+    }
+
+
+
 
 
     // Shop database en dur

@@ -167,7 +167,8 @@ fun AppNavHost(
 
                 DuelScreen(
                     modifier = Modifier.fillMaxSize(),
-                    state =duelState
+                    state =duelState,
+                    navController = navController
                 )
             }
 

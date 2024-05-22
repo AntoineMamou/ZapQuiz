@@ -59,13 +59,18 @@ import com.google.firebase.database.snapshots
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.Answer
 import fr.imt.atlantique.codesvi.app.data.model.Game
+import fr.imt.atlantique.codesvi.app.data.model.InGameViewModel
 import fr.imt.atlantique.codesvi.app.data.model.Player
 import fr.imt.atlantique.codesvi.app.data.model.QCM
 import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
+
 import fr.imt.atlantique.codesvi.app.ui.screens.question.*
+
+import fr.imt.atlantique.codesvi.app.ui.screens.question.Background
+import fr.imt.atlantique.codesvi.app.ui.screens.question.StartQuestion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -467,286 +472,7 @@ class MultiViewModel : ViewModel() {
 
 }
 
-class InGameViewModel() : ViewModel() {
-    private val db = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
 
-    private val _players = MutableLiveData<List<Player>>()
-    val players: LiveData<List<Player>> = _players
-
-    private val _questions = MutableLiveData<List<QCM>>()
-    val questions: LiveData<List<QCM>> = _questions
-
-    var nbQuestion = 0
-
-    private val _questionState = MutableStateFlow(true)  // Initial state
-    val questionState: StateFlow<Boolean> = _questionState.asStateFlow()
-
-    private val _round = MutableLiveData<Int>()
-    val round: LiveData<Int> = _round
-
-    val displayFunction = MutableStateFlow(false)
-
-    private var alreadyAnswered = false
-
-
-    fun updateQuestionState(){
-        _questionState.value = !questionState.value
-    }
-
-    fun fetchPlayers(gameId: String) {
-        val gameRef = db.getReference("games/$gameId")
-        gameRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val game = snapshot.getValue(Game::class.java)
-                game?.players?.let {
-                    _players.value = it
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Timber.e("InGameViewModel", "Failed to fetch game data: ${error.message}")
-            }
-        })
-    }
-
-    fun fetchRound(gameId: String){
-        val gameRef = db.getReference("games").child(gameId).child("round")
-        gameRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val currentRound = snapshot.getValue(Int::class.java)
-                if (currentRound != null) {
-                    _round.postValue(currentRound!!)
-                } else {
-                    _round.postValue(1) // Définir une valeur par défaut si rien n'est trouvé
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Timber.e("Error fetching game round: ${error.message}")
-            }
-        })
-    }
-
-
-
-    fun fetchQuestions(gameId: String){
-        val questionsRef = db.getReference("games/$gameId/questions")
-        questionsRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                val fetchedQuestions = mutableListOf<QCM>()
-                for (questionSnapshot in dataSnapshot.children) {
-
-                        val id = questionSnapshot.child("id").getValue(String::class.java)
-                        val type = questionSnapshot.child("type").getValue(String::class.java)
-                        val category =
-                            questionSnapshot.child("category").getValue(String::class.java)
-                        val level = questionSnapshot.child("level").getValue(Int::class.java)
-                        val question2 =
-                            questionSnapshot.child("question").getValue(String::class.java)
-                        val image = questionSnapshot.child("image").getValue(String::class.java)
-                        val gap = questionSnapshot.child("gap").getValue(Float::class.java)
-                        val explanation =
-                            questionSnapshot.child("explanation").getValue(String::class.java)
-
-                        // Récupération de la liste des réponses
-                        val answersList = ArrayList<Answer>()
-                        val answersSnapshot = questionSnapshot.child("answers")
-                        for (answerSnapshot in answersSnapshot.children) {
-                            val answer = answerSnapshot.child("answer").getValue(String::class.java)
-                            val isRight =
-                                answerSnapshot.child("right").getValue(Boolean::class.java)
-                            if (answer != null && isRight != null) {
-                                val reponse = Answer(isRight, answer)
-                                answersList.add(reponse)
-
-                            }
-                        }
-
-                        // Création de l'objet QCM avec les données récupérées
-                        val question = QCM(
-                            answersList,
-                            id ?: "",
-                            type ?: "",
-                            category ?: "",
-                            level ?: 0,
-                            question2 ?: "",
-                            image ?: "",
-                            gap ?: 0F,
-                            explanation ?: ""
-                        )
-                    fetchedQuestions.add(question)
-                }
-                _questions.value = fetchedQuestions
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                TODO("Not yet implemented")
-            }
-        })
-    }
-
-    fun UpdateWaitingAnswerPlayer(gameId: String, number : Int){
-        db.getReference("games").child(gameId).child("WaitingAnswerPlayer").setValue(number)
-    }
-
-    fun decrementWaitingAnswerPlayer(gameId: String) {
-        val waitingPlayerRef = db.getReference("games").child(gameId).child("WaitingAnswerPlayer")
-
-        // Démarre une transaction pour lire et écrire la valeur de façon atomique.
-        waitingPlayerRef.runTransaction(object : Transaction.Handler {
-            override fun doTransaction(mutableData: MutableData): Transaction.Result {
-                val currentValue = mutableData.getValue(Int::class.java)
-                if (currentValue == null) {
-                    mutableData.value = 0 // Initialise à 0 si la valeur n'est pas définie.
-                } else if (currentValue > 0) {
-                    mutableData.value = currentValue - 1
-                    if (mutableData.value == 0){
-                        //setFutureGameStartTime(gameId,5000)
-                    }
-                }
-                // Si la valeur actuelle est déjà à 0 ou moins, elle n'est pas changée.
-                return Transaction.success(mutableData)
-            }
-
-            override fun onComplete(databaseError: DatabaseError?, committed: Boolean, dataSnapshot: DataSnapshot?) {
-                if (committed) {
-                    println("Transaction réussie : WaitingAnswerPlayer décrémenté")
-                } else {
-                    println("Transaction annulée, raison : ${databaseError?.message}")
-                }
-            }
-        })
-    }
-
-
-
-    fun monitorGameStartTimeAndStart(gameId: String) {
-        val startTimeRef = db.getReference("games").child(gameId).child("gameStartTime")
-
-        startTimeRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val startTime = snapshot.getValue(Long::class.java)
-                if (startTime != null) {
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime >= startTime) {
-                        startGame()
-                        startTimeRef.removeEventListener(this) // Clean up listener
-                    } else {
-                        // Wait until the startTime to start the game
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            startGame()
-                        }, startTime - currentTime)
-                    }
-                }
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                println("Failed to listen for game start time: ${error.message}")
-            }
-        })
-    }
-
-
-
-    fun monitorWaitingAnswerPlayer(gameId: String) {
-        val waitingPlayerRef = db.getReference("games").child(gameId).child("WaitingAnswerPlayer")
-
-        // Créez un ValueEventListener
-        val listener = object : ValueEventListener {
-            override fun onDataChange(dataSnapshot: DataSnapshot) {
-                val value = dataSnapshot.getValue(Int::class.java) ?: 0 // Utilisez 0 comme valeur par défaut si non définie
-
-                if (value > 0) {
-                    displayFunction.value = false
-                    println("La valeur de WaitingAnswerPlayer est positive: $value")
-                    // Ajoutez ici tout comportement supplémentaire nécessaire lorsque la valeur est positive
-                } else {
-                    println("La valeur de WaitingAnswerPlayer est nulle ou moins.")
-                    // Comportement lorsque la valeur est nulle ou moins
-                    // Supprime l'écouteur si la valeur est nulle ou moins
-
-                    waitingPlayerRef.removeEventListener(this)
-                    displayFunction.value = true
-                    //monitorGameStartTimeAndStart(gameId)
-                }
-            }
-
-            override fun onCancelled(databaseError: DatabaseError) {
-                println("Écoute annulée pour WaitingAnswerPlayer, raison : ${databaseError.message}")
-            }
-        }
-
-        // Attribuez le listener à la référence
-        waitingPlayerRef.addValueEventListener(listener)
-    }
-
-
-    fun submitAnswer(gameId: String, username: String, correctAnswer: Boolean) {
-        if(!alreadyAnswered) {
-            alreadyAnswered=true
-            val gameRef = db.getReference("games/$gameId")
-
-            val playersRef = gameRef.child("players")
-
-//      Supposons que vous cherchez l'utilisateur avec le pseudo "Arno2"
-            val usernameQuery = playersRef.orderByChild("user/username").equalTo(username)
-            println("submit :$correctAnswer")
-            if (correctAnswer) {
-                usernameQuery.addListenerForSingleValueEvent(object : ValueEventListener {
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        if (snapshot.exists()) {
-                            for (playerSnapshot in snapshot.children) {
-                                val playerId =
-                                    playerSnapshot.key // Récupère l'ID du joueur, e.g., "0"
-                                val currentscore =
-                                    playerSnapshot.child("score").getValue(Int::class.java) ?: 0
-                                if (playerId != null) {
-                                    playersRef.child(playerId).child("score")
-                                        .setValue(currentscore + (questions.value!![nbQuestion].level * 4))
-                                        .addOnSuccessListener {
-                                            println("Score mis à jour avec succès pour le joueur $playerId")
-                                        }
-                                        .addOnFailureListener {
-                                            println("Échec de la mise à jour du score pour le joueur $playerId: ${it.message}")
-                                        }
-                                }
-
-
-                            }
-                        } else {
-                            println("Aucun joueur trouvé avec ce pseudo.")
-                        }
-
-                    }
-
-                    override fun onCancelled(error: DatabaseError) {
-                        Timber.tag("InGameViewModel").e("Failed to update score: %s", error.message)
-                    }
-                })
-            }
-
-            if(nbQuestion == 4) {
-                monitorWaitingAnswerPlayer(gameId)
-                decrementWaitingAnswerPlayer(gameId)
-            }
-            else{
-                nbQuestion+=1
-                _questionState.value=false
-                alreadyAnswered=false
-            }
-
-        }
-    }
-
-    fun startGame() {
-        viewModelScope.launch {
-            delay(5000) // Délai de 5 secondes
-            displayFunction.value = true
-        }
-    }
-
-
-}
 
 @Composable
 fun MultiScreen(
@@ -859,10 +585,6 @@ fun DisplayScore(user: User,score : Int) {
             )
     ) {
 
-
-
-
-
         Image(
             painter = painterResource(id = user.getImageResourceId(context)),
             contentDescription = null,
@@ -879,7 +601,7 @@ fun DisplayScore(user: User,score : Int) {
         )
 
 
-        if (score>0) {
+        if (score==0) {
             Text(
                 text = "$score point",
                 color = Color.White,
@@ -929,7 +651,7 @@ fun DisplayQuestion(gameViewModel: InGameViewModel, gameId: String, qcm: QCM, us
     val liste = qcm.answers.shuffled()
     val Questiontxt = qcm.question
 
-    gameViewModel.UpdateWaitingAnswerPlayer(gameId,2)
+
 
     PanneauQuestion(350, 350, Questiontxt)
     Column(
@@ -984,9 +706,11 @@ fun ShowQuestion(gameViewModel: InGameViewModel, gameId: String, user: User?){
             user
         )
 
+
         false -> {gameViewModel.updateQuestionState();ShowQuestion(gameViewModel, gameId, user)}
     }
 }
+
 
 @Composable
 fun StartGame(navController: NavHostController, gameId: String, user: User?) {
@@ -994,9 +718,16 @@ fun StartGame(navController: NavHostController, gameId: String, user: User?) {
     val gameModel : InGameViewModel = viewModel()
 
     val players = gameModel.players.observeAsState(initial = emptyList())
-    val currentRound = gameModel.round.observeAsState()
+    val currentRound = gameModel.round.collectAsState().value
 
     val shouldDisplayFunction = gameModel.displayFunction.collectAsState().value
+
+    // Start the next round after displaying the scores
+    /*LaunchedEffect(shouldDisplayFunction) {
+        if (!shouldDisplayFunction) {
+            gameModel.startNextRound(gameId)
+        }
+    }*/
 
     if (shouldDisplayFunction) {
         ShowQuestion(gameModel,gameId,user)  // Appelle la fonction DisplayFunction si l'état est vrai
@@ -1006,18 +737,22 @@ fun StartGame(navController: NavHostController, gameId: String, user: User?) {
         LaunchedEffect(gameId) {
             gameModel.fetchPlayers(gameId)
             gameModel.fetchQuestions(gameId)
-            gameModel.fetchRound(gameId)
+            //gameModel.fetchRound(gameId)
+            gameModel.initWaitingPlayer(gameId)
             gameModel.startGame()
+            println("bonjour ojze")
         }
 
         Column(modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceAround,
             horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "Round n° : ${currentRound.value}", fontWeight = FontWeight.Normal,
+            Text(text = "Round n° : ${currentRound}", fontWeight = FontWeight.Normal,
                 fontSize = 24.sp, color = Color.White, fontFamily = fontPrincipale)
             players.value.forEach { player ->
                 DisplayScore(player.user,player.score)
             }
         } // Sinon, continue d'afficher l'interface utilisateur actuelle du jeu
+
+
     }
 }
