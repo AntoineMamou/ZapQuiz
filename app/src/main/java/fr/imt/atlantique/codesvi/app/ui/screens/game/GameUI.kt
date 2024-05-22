@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -84,7 +85,13 @@ val fontChiffre  = FontFamily(Font(R.font.bubble_bobble))
 var user : User? = null
 
 fun getAnyImageId(image: String, context: Context): Int {
-    return context.resources.getIdentifier(image, "drawable", context.packageName)
+    val resourceId = context.resources.getIdentifier(image, "drawable", context.packageName)
+    return if (resourceId != 0) {
+        resourceId
+    } else {
+        // Return the ID for "lightning" drawable as a fallback
+        context.resources.getIdentifier("lightning", "drawable", context.packageName)
+    }
 }
 
 fun getUser(user_eff : User){
@@ -128,8 +135,21 @@ suspend fun getUserInfoDatabase(
                         for (friendRequestSnapshot in friendsRequestSnapshot.children) {
                             friendsRequest.add(friendRequestSnapshot.value.toString())
                         }
+
+                        val availableIcons = ArrayList<String>()
+                        val availableTitles = ArrayList<String>()
+
+                        val availableIconsSnapshot = userSnapshot.child("availableIcons")
+                        for (iconSnapshot in availableIconsSnapshot.children) {
+                            availableIcons.add(iconSnapshot.value.toString())
+                        }
+
+                        val availableTitlesSnapshot = userSnapshot.child("availableTitles")
+                        for (titleSnapshot in availableTitlesSnapshot.children) {
+                            availableTitles.add(titleSnapshot.value.toString())
+                        }
                         Timber.d("fini pour $userSearched")
-                        val user = User(id, password, trophies, playerIcon, title, connectionState, friendsList, victory, gamePlayed, peakTrophy, favoriteCategory, money, friendsRequest)
+                        val user = User(id, password, trophies, playerIcon, title, connectionState, friendsList, victory, gamePlayed, peakTrophy, favoriteCategory, money, friendsRequest, availableIcons, availableTitles)
                         continuation.resume(user)
                         return
                     }
@@ -1053,7 +1073,8 @@ fun ScrollableColumnWithImages(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.5f))
-            .clickable(onClick = onClose),
+            .clickable(onClick = onClose)
+            .zIndex(1f),
         contentAlignment = Alignment.Center
     ) {
         Box(
@@ -1118,11 +1139,89 @@ fun ScrollableColumnWithImages(
 }
 
 @Composable
+fun DisplayTitles(
+    titleList: List<String>,
+    onClose: () -> Unit,
+    viewModel: GameViewModel
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(onClick = onClose)
+            .zIndex(1f),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.8F)
+                .height(350.dp)
+                .align(Alignment.Center)
+                .background(colorResource(id = R.color.blue_2), shape = RoundedCornerShape(15.dp))
+                .border(
+                    width = 4.dp,
+                    color = Color.Black,
+                    shape = RoundedCornerShape(15.dp)
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        colorResource(id = R.color.blue_2),
+                        shape = RoundedCornerShape(15.dp)
+                    )
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.SpaceAround,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Changer de titre",
+                    fontFamily = fontPrincipale,
+                    color = Color.White,
+                    fontSize = 20.sp
+                )
+
+                Spacer(modifier = Modifier.height(15.dp))
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.SpaceAround,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    items(titleList) { title ->
+                        Text(
+                            text = title,
+                            fontFamily = fontPrincipale,
+                            color = Color.LightGray,
+                            fontSize = 16.sp,
+                            modifier = Modifier
+                                .clickable {
+                                    // Handle title click here
+                                    viewModel.changeAnyAtomicV2(title = title);
+                                    onClose()
+                                }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                Button(onClick = onClose) {
+                    Text("Fermer")
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
 fun ProfilWindow(
     onClose: () -> Unit,
     user_display : User,
     isNotFriend: Boolean,
-    onDisplayIcons: () -> Unit
+    onDisplayIcons: () -> Unit,
+    onDisplayTitles: () -> Unit = {}
 
     ){
     // La taille de la fenêtre modale des paramètres
@@ -1229,7 +1328,17 @@ fun ProfilWindow(
                             text = user_display.title,
                             color = Color.LightGray,
                             fontSize = 16.sp,
-                            fontFamily = fontPrincipale
+                            fontFamily = fontPrincipale,
+                            modifier = Modifier.clickable(onClick =
+                            {
+                                if(user_display.username.equals(user!!.username)){
+                                    onClose();
+                                    onDisplayTitles()
+                                }
+                            }
+
+                            )
+
                         )
 
                     }
@@ -1309,7 +1418,7 @@ class GameViewModel : ViewModel() {
     }
 
 
- fun changeAnyAtomicV2(
+    fun changeAnyAtomicV2(
         trophies: Int? = _userState.value?.trophies,
         playerIcon: String? = _userState.value?.playerIcon,
         title: String? = _userState.value?.title,
@@ -1318,7 +1427,9 @@ class GameViewModel : ViewModel() {
         game_played: Int? = _userState.value?.game_played,
         peak_trophy: Int? = _userState.value?.peak_trophy,
         favorite_category: String? = _userState.value?.favorite_category,
-        money: Int? = _userState.value?.money
+        money: Int? = _userState.value?.money,
+        newAvailableIcon: String? = null,
+        newAvailableTitle: String? = null,
     ) {
         getUserId(user!!.username) { userId ->
             val database =
@@ -1332,14 +1443,12 @@ class GameViewModel : ViewModel() {
                     if (existingUser != null) {
                         var isUpdated = false
 
-
                         if (existingUser.playerIcon != playerIcon) {
                             if (playerIcon != null) {
                                 existingUser.playerIcon = playerIcon
                                 isUpdated = true
                             }
                         }
-
 
                         if (existingUser.title != title) {
                             if (title != null) {
@@ -1386,13 +1495,27 @@ class GameViewModel : ViewModel() {
                         if (existingUser.connectionState != connectionState) {
                             if (connectionState != null) {
                                 existingUser.connectionState = connectionState
+                                isUpdated = true
                             }
                         }
 
                         if (existingUser.trophies != trophies) {
                             if (trophies != null) {
                                 existingUser.trophies = trophies
+                                isUpdated = true
                             }
+                        }
+
+                        if (newAvailableIcon != null && !existingUser.availableIcons.contains(newAvailableIcon)) {
+                            existingUser.availableIcons =
+                                existingUser.availableIcons + newAvailableIcon
+                            isUpdated = true
+                        }
+
+                        if (newAvailableTitle != null && !existingUser.availableTitles.contains(newAvailableTitle)) {
+                            existingUser.availableTitles =
+                                existingUser.availableTitles + newAvailableTitle
+                            isUpdated = true
                         }
 
                         if (isUpdated) {
@@ -1412,51 +1535,9 @@ class GameViewModel : ViewModel() {
                     println("Error fetching user: $databaseError")
                 }
             })
-
         }
     }
 }
-
-fun getSharedPreferences(context: Context): SharedPreferences {
-    return context.getSharedPreferences("IconNames", Context.MODE_PRIVATE)
-}
-
-// Function to load icon names from SharedPreferences, initializes if nothing is saved
-fun loadIconNames(context: Context): List<String> {
-    val sharedPreferences = getSharedPreferences(context)
-    return sharedPreferences.getStringSet("iconNames", null)?.toList()
-        ?: listOf(
-            "lightning", "lightning_blue", "lightning_black",
-            "lightning_red", "lightning_green", "lightning_white",
-            "lightning_purple", "lightning_pink"
-        )
-}
-
-fun addIconName(context: Context, iconName: String) {
-    val sharedPreferences = getSharedPreferences(context)
-    val iconNames = sharedPreferences.getStringSet("iconNames", mutableSetOf())?.toMutableSet()
-        ?: mutableSetOf()
-
-    iconNames.add(iconName)
-
-    val editor = getSharedPreferences(context).edit()
-    editor.putStringSet("iconNames", iconNames)
-    editor.apply()
-}
-
-fun removeIconName(context: Context, iconName: String) {
-    val sharedPreferences = getSharedPreferences(context)
-    val iconNames = sharedPreferences.getStringSet("iconNames", mutableSetOf())?.toMutableSet()
-        ?: mutableSetOf()
-
-    iconNames.remove(iconName)
-
-    val editor = getSharedPreferences(context).edit()
-    editor.putStringSet("iconNames", iconNames)
-    editor.apply()
-}
-
-
 
 @SuppressLint("CoroutineCreationDuringComposition")
 @Composable
@@ -1491,9 +1572,8 @@ fun GameScreen(
     var settingsModalVisible by remember { mutableStateOf(false) }
     var profilVisible by remember { mutableStateOf(false) }
     var changeIconVisible by remember { mutableStateOf(false) }
-    var icons = loadIconNames(context)
-    //removeIconName(context, "pig")
-    println(icons)
+    var changeTitleVisible by remember { mutableStateOf(false) }
+
 
     // Affichage des fenêtres modales
     if (settingsModalVisible) {
@@ -1505,7 +1585,8 @@ fun GameScreen(
                 onClose = { profilVisible = false },
                 user!!,
                 false,
-                onDisplayIcons = { changeIconVisible = true }
+                onDisplayIcons = { changeIconVisible = true },
+                onDisplayTitles = { changeTitleVisible = true }
             )
         }
     }
@@ -1520,7 +1601,11 @@ fun GameScreen(
 
     if (changeIconVisible) {
         ScrollableColumnWithImages(
-            icons, onClose = { changeIconVisible = false },viewModel
+            user!!.availableIcons, onClose = { changeIconVisible = false },viewModel
         )
+    }
+
+    if (changeTitleVisible) {
+        DisplayTitles(titleList = user!!.availableTitles, onClose = {changeTitleVisible = false}, viewModel)
     }
 }
