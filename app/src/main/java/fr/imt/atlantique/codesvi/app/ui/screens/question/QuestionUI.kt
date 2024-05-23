@@ -27,10 +27,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
-
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,7 +58,6 @@ import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.Answer
 import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
 import fr.imt.atlantique.codesvi.app.data.model.QCM
-import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -1013,6 +1009,23 @@ fun EndGameScreen(
                     if(victoire) {
                         NombreQuestion = -1
                         NombreDeVies = 3
+
+                        //Titres de victoire
+                        val newTitle = when (categorie) {
+                            "histoire" -> "Zapoléon I"
+                            "geographie" -> "Zapographe"
+                            "musique" -> "Zap God"
+                            "cinema" -> "Zappeur sucré salé"
+                            "litterature" -> "Zapoète"
+                            "autres_arts" -> "Zapeintre"
+                            "sport" -> "Mzappé"
+                            "jeux_video" -> "xX Dark Zappeur Xx"
+                            "sciences" -> "Zapologue"
+                            "tout_theme" -> "Légende du Zap"
+                            else -> "Zappeur Débutant"
+                        }
+                        viewModel.changeAnyAtomicV2(newAvailableTitle = newTitle)
+
 
                     } else {
 
