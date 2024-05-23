@@ -1,5 +1,6 @@
 package fr.imt.atlantique.codesvi.app.ui.screens.shop
 
+
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
@@ -47,17 +48,8 @@ import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
-
-
 import fr.imt.atlantique.codesvi.app.data.model.MusicControl
-import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
-
-import fr.imt.atlantique.codesvi.app.data.model.User
-
-
 import fr.imt.atlantique.codesvi.app.ui.screens.game.DisplayTitles
-
-
 import fr.imt.atlantique.codesvi.app.ui.screens.game.HorizontalBar
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ProfilWindow
 import fr.imt.atlantique.codesvi.app.ui.screens.game.ScrollableColumnWithImages
@@ -66,14 +58,7 @@ import fr.imt.atlantique.codesvi.app.ui.screens.game.getAnyImageId
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUser
 import fr.imt.atlantique.codesvi.app.ui.screens.game.user
 import fr.imt.atlantique.codesvi.app.ui.screens.profile.fontPrincipale
-
-
 import timber.log.Timber
-
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 
 
@@ -254,7 +239,7 @@ fun IconList(icons: List<IconModel>,
 
 }
 fun isBuyable(icon: IconModel, iconNameList: List<String>): Boolean {
-    return !(iconNameList.contains(icon.iconSourceName)) && user!!.money > icon.iconPrice
+    return !(iconNameList.contains(icon.iconSourceName)) && user!!.money >= icon.iconPrice
 }
 
 @Composable
