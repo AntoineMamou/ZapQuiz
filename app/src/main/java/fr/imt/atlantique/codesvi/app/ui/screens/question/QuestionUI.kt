@@ -945,7 +945,6 @@ fun GameOver(
                         color = Color.White,
                         fontFamily = fontPrincipale,
                         fontSize = 15.sp,
-
                         // Aligner le texte au centre de la Row
                     )
                 }
