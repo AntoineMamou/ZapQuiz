@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -317,7 +318,7 @@ fun Logo(){
 
 
 //Permet de définir le mode de jeu pour le bouton start et l'image affiché parmi les 3 modes de jeu
-var currentIndex = 1
+var currentIndex by mutableStateOf(1)
 
 @Composable
 fun ModeDeJeu() {
@@ -578,7 +579,7 @@ fun StartButton(navController: NavHostController) {
 }
 
 @Composable
-fun StartButton2(navController: NavHostController){
+fun StartButton3(navController: NavHostController){
     val context = LocalContext.current
     Row(verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
@@ -598,6 +599,7 @@ fun StartButton2(navController: NavHostController){
                 RoundedCornerShape(15.dp)
             )
             .clickable(onClick = {
+                /*
                 if (currentIndex <= 0) {
                     currentIndex = 0
                     val soundEffect = MediaPlayer.create(context, R.raw.game_start)
@@ -616,7 +618,7 @@ fun StartButton2(navController: NavHostController){
                         mp.release()
                     }
                     navController.navigate(HomeRootScreen.Solo.route)
-                }
+                }*/
 
                 if (currentIndex >= 2) {
                     currentIndex = 2
@@ -638,7 +640,57 @@ fun StartButton2(navController: NavHostController){
     }
 }
 
+@Composable
+fun StartButton2(navController: NavHostController) {
+    val context = LocalContext.current
+    var isButtonEnabled =  remember{mutableStateOf(currentIndex == 1)}
 
+    LaunchedEffect(currentIndex){
+        isButtonEnabled.value = currentIndex != 0 && currentIndex != 2
+        println("currentIndex")
+        println(currentIndex)
+        println(isButtonEnabled)
+    }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .width(300.dp)
+            .height(70.dp)
+            .background(
+                color = if (isButtonEnabled.value) MaterialTheme.colorScheme.secondary else Color.Gray,
+                shape = RoundedCornerShape(15.dp)
+            )
+            .border(
+                5.dp,
+                color = MaterialTheme.colorScheme.primary,
+                shape = RoundedCornerShape(15.dp)
+            )
+            .clickable(enabled = isButtonEnabled.value, onClick = {
+                if (currentIndex == 0) {
+                    currentIndex = 0
+                    // This block is intentionally left empty because the button is disabled when currentIndex is 0 or 1.
+                } else if (currentIndex == 1) {
+                    val soundEffect = MediaPlayer.create(context, R.raw.game_start)
+                    soundEffect.start()
+                    soundEffect.setOnCompletionListener { mp ->
+                        mp.release()
+                    }
+                    navController.navigate(HomeRootScreen.Solo.route)
+                } else if (currentIndex >= 2) {
+                    currentIndex = 2
+                }
+            })
+    ) {
+        Text(
+            text = "Start",
+            color = Color.White,
+            fontSize = 25.sp,
+            fontFamily = fontPrincipale // Replace with your custom font if needed
+        )
+    }
+}
 
 @Composable
 fun Centre(navController: NavHostController) {
@@ -990,7 +1042,10 @@ fun addFriendfromId(userId : String, username_friend : String, deleteRequest : B
                 if (user_searched != null) {
                     // Update the friends list
                     val updatedFriends = user_searched.friends.toMutableList()
-                    updatedFriends.add(friendUsername)
+                    if(updatedFriends.contains(username_friend)){
+                        updatedFriends.add(friendUsername)
+                    }
+
 
                     // Update the user object with the new friends list
                     user_searched.friends = updatedFriends

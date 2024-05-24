@@ -941,7 +941,7 @@ fun EndGameScreen(
                 }
 
                 Text(
-                    text = "$NombreQuestion questions réussis",
+                    text = "$NombreQuestion questions réussies",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -949,6 +949,7 @@ fun EndGameScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Row(
+
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(bottom = 8.dp)
                 ) {

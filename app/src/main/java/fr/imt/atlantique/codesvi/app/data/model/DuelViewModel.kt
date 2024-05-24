@@ -1,5 +1,8 @@
 package fr.imt.atlantique.codesvi.app.data.model
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
@@ -9,11 +12,29 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.screens.game.getUserInfoDatabase
+import fr.imt.atlantique.codesvi.app.ui.screens.question.QuestionIndexList
+import fr.imt.atlantique.codesvi.app.ui.screens.question.RandomCategorie
+import fr.imt.atlantique.codesvi.app.ui.screens.question.categorie
+import fr.imt.atlantique.codesvi.app.ui.screens.question.databaseGlobal
+import fr.imt.atlantique.codesvi.app.ui.screens.question.questionFromDatabase
+import fr.imt.atlantique.codesvi.app.ui.screens.question.questionGeneration
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import timber.log.Timber
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
+import kotlin.random.Random
 
 class DuelViewModel : ViewModel() {
     private val _gameState = MutableStateFlow("waiting")  // Initial state
@@ -34,7 +55,10 @@ class DuelViewModel : ViewModel() {
 
     private val _gameStarted = MutableStateFlow(false) // État initial de la partie
 
+    private var questionToAdd : QCM? = null
 
+    private val _questionList = MutableStateFlow<List<QCM>>(listOf())
+    val questionList :StateFlow<List<QCM>> = _questionList.asStateFlow()
 
     fun loadUser(username: String?) {
         viewModelScope.launch {
@@ -52,7 +76,6 @@ class DuelViewModel : ViewModel() {
         val gamePlayers = players.map { Player(it, 0) }
         val initialRound = 1
         val questions = generateQuestions()
-        println(questions)
         val newGame = Game(gameIdValue, gamePlayers, initialRound, questions, gameState = "waiting")
         val gameRef = database.getReference("games").child(gameIdValue)
 
@@ -95,9 +118,179 @@ class DuelViewModel : ViewModel() {
         })
     }
 
-    private fun generateQuestions(): List<QCM> {
-        // Implémentez la logique pour générer ou sélectionner des questions
-        return listOf(
+
+    suspend fun getQuestionFromDatabase2(theme: String, randomIndex: Int) {
+        val questionsRef = database.getReference("questions/$theme")
+
+        val valueEventListener = object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                for (questionSnapshot in dataSnapshot.children) {
+                    val questionId = questionSnapshot.key?.toIntOrNull()
+
+                    if (questionId == randomIndex) {
+                        val id = questionSnapshot.child("id").getValue(String::class.java)
+                        val type = questionSnapshot.child("type").getValue(String::class.java)
+                        val category = questionSnapshot.child("category").getValue(String::class.java)
+                        val level = questionSnapshot.child("level").getValue(Int::class.java)
+                        val question2 = questionSnapshot.child("question").getValue(String::class.java)
+                        val image = questionSnapshot.child("image").getValue(String::class.java)
+                        val gap = questionSnapshot.child("gap").getValue(Float::class.java)
+                        val explanation = questionSnapshot.child("explanation").getValue(String::class.java)
+
+                        // Récupération de la liste des réponses
+                        val answersList = ArrayList<Answer>()
+                        val answersSnapshot = questionSnapshot.child("answers")
+                        for (answerSnapshot in answersSnapshot.children) {
+                            val answer = answerSnapshot.child("answer").getValue(String::class.java)
+                            val isRight = answerSnapshot.child("isRight").getValue(Boolean::class.java)
+                            if (answer != null && isRight != null) {
+                                val reponse = Answer(isRight, answer)
+                                answersList.add(reponse)
+                            }
+                        }
+
+                        // Création de l'objet QCM avec les données récupérées
+                        questionToAdd = QCM(
+                            answersList,
+                            id ?: "",
+                            type ?: "",
+                            category ?: "",
+                            level ?: 0,
+                            question2 ?: "",
+                            image ?: "",
+                            gap ?: 0F,
+                            explanation ?: ""
+                        )
+                        println(questionToAdd)
+
+                        return
+                    }
+                }
+
+
+            }
+
+            override fun onCancelled(databaseError: DatabaseError) {
+                // Handle the error
+                println("Database error: ${databaseError.message}")
+
+            }
+        }
+
+        questionsRef.addListenerForSingleValueEvent(valueEventListener)
+    }
+
+    suspend fun getQuestionFromDatabase(theme: String, randomIndex: Int): QCM? {
+        return suspendCoroutine { cont ->
+            val questionsRef = database.getReference("questions/$theme")
+
+            val valueEventListener = object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+                    for (questionSnapshot in dataSnapshot.children) {
+                        val questionId = questionSnapshot.key?.toIntOrNull()
+                        Timber.d("ok")
+                        if (questionId == randomIndex) {
+                            val id = questionSnapshot.child("id").getValue(String::class.java)
+                            val type = questionSnapshot.child("type").getValue(String::class.java)
+                            val category = questionSnapshot.child("category").getValue(String::class.java)
+                            val level = questionSnapshot.child("level").getValue(Int::class.java)
+                            val question2 = questionSnapshot.child("question").getValue(String::class.java)
+                            val image = questionSnapshot.child("image").getValue(String::class.java)
+                            val gap = questionSnapshot.child("gap").getValue(Float::class.java)
+                            val explanation = questionSnapshot.child("explanation").getValue(String::class.java)
+
+                            val answersList = ArrayList<Answer>()
+                            val answersSnapshot = questionSnapshot.child("answers")
+                            for (answerSnapshot in answersSnapshot.children) {
+                                val answer = answerSnapshot.child("answer").getValue(String::class.java)
+                                val isRight = answerSnapshot.child("isRight").getValue(Boolean::class.java)
+                                if (answer != null && isRight != null) {
+                                    val reponse = Answer(isRight, answer)
+                                    answersList.add(reponse)
+                                }
+                            }
+
+                            val questionToAdd = QCM(
+                                answersList,
+                                id ?: "",
+                                type ?: "",
+                                category ?: "",
+                                level ?: 0,
+                                question2 ?: "",
+                                image ?: "",
+                                gap ?: 0F,
+                                explanation ?: ""
+                            )
+                            cont.resume(questionToAdd)
+                            return
+                        }
+                    }
+                    cont.resume(null)
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+                    cont.resumeWithException(databaseError.toException())
+                }
+            }
+
+            questionsRef.addListenerForSingleValueEvent(valueEventListener)
+        }
+    }
+
+    // Function to generate questions
+    fun generateQuestions(): List<QCM> {
+        val questionsList = mutableListOf<QCM>()
+        runBlocking {
+            coroutineScope {
+                val jobs = (1..10).map {
+                    async {
+                        val randomCategory = RandomCategorie()
+                        val questionIndex = Random.nextInt(0, 50)
+                        getQuestionFromDatabase(randomCategory, questionIndex)
+                    }
+                }
+                val results = jobs.awaitAll()
+                questionsList.addAll(results.filterNotNull())
+            }
+        }
+
+        if (questionsList.isEmpty()) {
+            println("No questions found for the given indices.")
+        } else {
+            println("Questions retrieved: ${questionsList.size}")
+        }
+
+        println("Final list of questions: $questionsList")
+        return questionsList
+    }
+
+
+    private  fun generateQuestions2(): List<QCM> {
+        viewModelScope.launch {
+            val randomcategory = RandomCategorie()
+            val questionIndex = Random.nextInt(0, 50)
+            getQuestionFromDatabase2(randomcategory, questionIndex)
+            if (questionToAdd != null) {
+                    // Do something with the question
+                    println("ok question")
+                    _questionList.value = _questionList.value + questionToAdd!!
+            } else {
+                    // Handle the case where no question was found
+                    println("No question found for the given index.")
+            }
+
+            println("fin des questions : $questionList")
+            while (_questionList.value.size < 15){
+                println(_questionList.value)
+            }
+        }
+
+        return _questionList.value
+
+
+
+
+       /* return listOf(
             QCM(answers=listOf(Answer(isRight=true, answer="Qin Shi Huang"), Answer(isRight=false, answer="Qin Shi Huangdi"), Answer(isRight=false, answer="Liu Bang"), Answer(isRight=false, answer="Han Wudi")), id="histoire_17", type="qcm_4", category="histoire", level=5, question="Qui était le premier empereur de Chine ?", image="", gap=0F, explanation=""),
 
             QCM(answers=listOf(Answer(isRight=true, answer="Louis-Napoléon Bonaparte"), Answer(isRight=false, answer="Adolphe Thiers"), Answer(isRight=false, answer="Jules Grévy"), Answer(isRight=false, answer="Louis-Philippe")), id="histoire_34", type="qcm_4", category="histoire", level=4, question="Qui a été élu président de la République française lors de la première élection présidentielle en 1848 ?", image="", gap=0F, explanation=""),
@@ -118,7 +311,7 @@ class DuelViewModel : ViewModel() {
 
             QCM(answers=listOf(Answer(isRight=false, answer="Lac Supérieur"), Answer(isRight=false, answer="Lac Victoria"), Answer(isRight=true, answer="Lac Baïkal"), Answer(isRight=false, answer="Lac Tanganyika")), id="geographie_19", type="qcm_4", category="géographie", level=5, question="Quel est le plus grand lac du monde en volume d'eau ?", image="", gap=0F, explanation="")
 
-        )
+        )*/
     }
 
     private var waitingRoomListener: ValueEventListener? = null
