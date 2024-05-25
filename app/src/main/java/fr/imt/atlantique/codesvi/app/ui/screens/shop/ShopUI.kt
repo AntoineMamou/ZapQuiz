@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -75,15 +76,21 @@ fun IconComponent(
     ){
         IconButton(
             onClick = { icon.iconFunction(icon) },
-            modifier = Modifier
-                .size(80.dp),
+            modifier = Modifier.size(80.dp),
             content = {
-                Image(
-                    painter = painterResource(id = getAnyImageId(icon.iconSourceName, context)),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(80.dp)
-                )
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Image(
+                        painter = painterResource(id = getAnyImageId(icon.iconSourceName, context)),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,  // Ensure the image is not cropped
+                        modifier = Modifier
+                            .padding(8.dp)  // Adjust padding as needed to make the image smaller
+                            .fillMaxSize()
+                    )
+                }
             }
         )
 
@@ -535,10 +542,59 @@ fun ShopScreen(
         iconPrice = 3000,
         iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
     )
+    val icon8 = IconModel(
+        iconSourceName = "narval",
+        iconName = "\"Eh Narvaloo\"",
+        iconPrice = 5000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon9 = IconModel(
+        iconSourceName = "paint",
+        iconName = "Pour les grands artistes",
+        iconPrice = 1000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon10 = IconModel(
+        iconSourceName = "perroquet",
+        iconName = "\"Tu pètes, je répète\"",
+        iconPrice = 5000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon11 = IconModel(
+        iconSourceName = "poulpe",
+        iconName = "IMTA <3",
+        iconPrice = 3000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon12 = IconModel(
+        iconSourceName = "red_bear",
+        iconName = "100% copyright Akara",
+        iconPrice = 2000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon13 = IconModel(
+        iconSourceName = "shiba",
+        iconName = "Oh bébouuuuuuuuu",
+        iconPrice = 10000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon14 = IconModel(
+        iconSourceName = "crown",
+        iconName = "King",
+        iconPrice = 1000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
+    val icon15 = IconModel(
+        iconSourceName = "eiffel",
+        iconName = "Mme 2Fèrre",
+        iconPrice = 1000,
+        iconFunction = {iconModel ->  infoBuyVisible = true; iconModelBuyVisible = iconModel}
+    )
 
 
     val iconList: List<IconModel> = listOf(
-        icon1, icon2, icon3, icon4, icon5, icon6, icon7
+        icon1, icon2, icon3, icon4, icon5, icon6, icon7,
+        icon8, icon9, icon10, icon11, icon12, icon13, icon14, icon15
         )
 
 

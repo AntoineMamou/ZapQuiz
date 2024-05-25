@@ -34,9 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,7 +50,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
@@ -60,43 +57,26 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-
-import dagger.hilt.android.internal.Contexts.getApplication
-import fr.imt.atlantique.codesvi.app.data.model.Answer
-import fr.imt.atlantique.codesvi.app.data.model.MusicControl
-import fr.imt.atlantique.codesvi.app.data.model.QCM
-import fr.imt.atlantique.codesvi.app.data.model.SoundEffect
-
 import fr.imt.atlantique.codesvi.app.R
 import fr.imt.atlantique.codesvi.app.data.model.GameViewModel
+import fr.imt.atlantique.codesvi.app.data.model.MusicControl
 import fr.imt.atlantique.codesvi.app.data.model.MusicManager
-
 import fr.imt.atlantique.codesvi.app.data.model.User
 import fr.imt.atlantique.codesvi.app.ui.navigation.HomeRootScreen
 import fr.imt.atlantique.codesvi.app.ui.navigation.RootScreen
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
-import kotlin.math.abs
 
 
 val  fontPrincipale = FontFamily(Font(R.font.bubble_bobble))
@@ -226,13 +206,21 @@ fun Header(settingsonClick: () -> Unit , profilOnClick: ()->Unit, user : User) {
         ){
             IconButton(
                 onClick = { profilOnClick() },
-                modifier = Modifier.size(70.dp),
+                modifier = Modifier.size(90.dp),
                 content = {
-                    Image(
-                        painter = painterResource(id = user.getImageResourceId(context)),
-                        contentDescription = null, // Description de l'image si nécessaire
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxSize()
-                    )
+                    ) {
+                        Image(
+                            painter = painterResource(id = user.getImageResourceId(context)),
+                            contentDescription = null, // Description de l'image si nécessaire
+                            contentScale = ContentScale.Fit,  // Ensure the image is not cropped
+                            modifier = Modifier
+                                .padding(8.dp)  // Adjust padding as needed to make the image smaller
+                                .fillMaxSize()
+                        )
+                    }
                 }
             )
 
@@ -1400,22 +1388,29 @@ fun ProfilWindow(
 
                     IconButton(
                         onClick = {
-                                  if(user_display.username.equals(user!!.username)){
-                                      onClose();
-                                      onDisplayIcons()
-
-
-                                  }
+                            if (user_display.username == user!!.username) {
+                                onClose()
+                                onDisplayIcons()
+                            }
                         },
-                        modifier = Modifier.size(70.dp),
+                        modifier = Modifier.size(80.dp),
                         content = {
-                            Image(
-                                painter = painterResource(id = user_display.getImageResourceId(context)),
-                                contentDescription = null, // Description de l'image si nécessaire
+                            Box(
+                                contentAlignment = Alignment.Center,
                                 modifier = Modifier.fillMaxSize()
-                            )
+                            ) {
+                                Image(
+                                    painter = painterResource(id = user_display.getImageResourceId(context)),
+                                    contentDescription = null, // Description de l'image si nécessaire
+                                    contentScale = ContentScale.Fit,  // Ensure the image is not cropped
+                                    modifier = Modifier
+                                        .padding(8.dp)  // Adjust padding as needed to make the image smaller
+                                        .fillMaxSize()
+                                )
+                            }
                         }
                     )
+
 
                     Spacer(modifier=Modifier.width(24.dp))
 
@@ -1548,7 +1543,7 @@ fun GameScreen(
     val username = sharedPreferences.getString("username", "")
 
     // Déclenchez le chargement de l'utilisateur
-    LaunchedEffect(userState?.username, userState?.money) {
+    LaunchedEffect(userState?.username, userState?.money, userState?.playerIcon) {
         viewModel.loadUser(username)
     }
 
