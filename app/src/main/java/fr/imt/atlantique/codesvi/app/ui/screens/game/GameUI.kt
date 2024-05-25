@@ -643,13 +643,11 @@ fun StartButton3(navController: NavHostController){
 @Composable
 fun StartButton2(navController: NavHostController) {
     val context = LocalContext.current
-    var isButtonEnabled =  remember{mutableStateOf(currentIndex == 1)}
+    var isButtonEnabled =  remember{mutableStateOf(currentIndex == 1 || currentIndex == 0)}
 
     LaunchedEffect(currentIndex){
-        isButtonEnabled.value = currentIndex != 0 && currentIndex != 2
-        println("currentIndex")
-        println(currentIndex)
-        println(isButtonEnabled)
+        //isButtonEnabled.value = currentIndex != 0 && currentIndex != 2
+        isButtonEnabled.value =currentIndex != 2
     }
 
     Row(
@@ -670,6 +668,12 @@ fun StartButton2(navController: NavHostController) {
             .clickable(enabled = isButtonEnabled.value, onClick = {
                 if (currentIndex == 0) {
                     currentIndex = 0
+                    val soundEffect = MediaPlayer.create(context, R.raw.game_start)
+                    soundEffect.start()
+                    soundEffect.setOnCompletionListener { mp ->
+                        mp.release()
+                    }
+                    navController.navigate(HomeRootScreen.Duel.route)
                     // This block is intentionally left empty because the button is disabled when currentIndex is 0 or 1.
                 } else if (currentIndex == 1) {
                     val soundEffect = MediaPlayer.create(context, R.raw.game_start)
@@ -1042,7 +1046,7 @@ fun addFriendfromId(userId : String, username_friend : String, deleteRequest : B
                 if (user_searched != null) {
                     // Update the friends list
                     val updatedFriends = user_searched.friends.toMutableList()
-                    if(updatedFriends.contains(username_friend)){
+                    if(!updatedFriends.contains(username_friend)){
                         updatedFriends.add(friendUsername)
                     }
 

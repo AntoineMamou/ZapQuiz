@@ -263,14 +263,50 @@ class LoginViewModel : ViewModel() {
             return
         }
 
-        ajouterUtilisateur(pseudo, motDePasse)
-        val editor = sharedPreferences.edit();
-        editor.putBoolean("connexion", true);
-        editor.putString("username",pseudo);
-        editor.putBoolean("first_login", false); // Mettre à jour le premier login
-        editor.apply();
-        navController.navigate(RootScreen.Home.route)
+        // Vérifier l'unicité du pseudo
+        verifierUnicitePseudo(pseudo,
+            onSuccess = {
+                // Le pseudo est unique, ajouter l'utilisateur à la base de données
+                ajouterUtilisateur(pseudo, motDePasse)
+                val editor = sharedPreferences.edit();
+                editor.putBoolean("connexion", true);
+                editor.putString("username",pseudo);
+                editor.putBoolean("first_login", false); // Mettre à jour le premier login
+                editor.apply();
+                navController.navigate(RootScreen.Home.route)
+            },
+            onError = {
+                // Le pseudo existe déjà, émettre un message d'erreur
+                viewModelScope.launch {
+                    _snackbarFlow.emit("Ce pseudo est déjà utilisé.")
+                }
+            }
+        )
     }
+
+    private fun verifierUnicitePseudo(pseudo: String, onSuccess: () -> Unit, onError: () -> Unit) {
+        val database = FirebaseDatabase.getInstance("https://zapquiz-dbfb8-default-rtdb.europe-west1.firebasedatabase.app/")
+        val usersRef = database.getReference("utilisateurs")
+
+        usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                for (userSnapshot in snapshot.children) {
+                    val userPseudo = userSnapshot.child("username").getValue(String::class.java)
+                    if (userPseudo == pseudo) {
+                        onError() // Le pseudo existe déjà
+                        return
+                    }
+                }
+                onSuccess() // Le pseudo est unique
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Timber.e("Erreur lors de la vérification de l'unicité du pseudo : ${error.message}")
+                onError()
+            }
+        })
+    }
+
 
     private fun isMotDePasseConforme(motDePasse: String): Pair<Boolean, String> {
         if (motDePasse.length < 8) {

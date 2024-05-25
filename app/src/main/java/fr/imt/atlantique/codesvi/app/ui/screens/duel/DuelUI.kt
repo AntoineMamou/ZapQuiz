@@ -25,11 +25,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -274,8 +279,6 @@ fun DisplayQuestion(gameViewModel: InDuelGame, gameId: String, qcm: QCM, user: U
     val liste = qcm.answers.shuffled()
     val Questiontxt = qcm.question
 
-
-
     PanneauQuestion(350, 350, Questiontxt)
     Column(
         modifier = Modifier
@@ -318,16 +321,119 @@ fun DisplayQuestion(gameViewModel: InDuelGame, gameId: String, qcm: QCM, user: U
 
 
 @Composable
+fun DisplayQuestionVF(gameViewModel: InDuelGame, gameId: String, qcm: QCM, user: User?) {
+    val liste = qcm.answers.shuffled()
+    val Questiontxt = qcm.question
+
+    PanneauQuestion(350, 350, Questiontxt)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 40.dp),
+        verticalArrangement = Arrangement.Bottom,
+        horizontalAlignment = Alignment.End,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            BoutonQCMMulti(liste[0].answer, onClick = { user?.let {
+                gameViewModel.submitAnswer(gameId,
+                    it.username,liste[0].isRight)
+            } }, liste[0].isRight)
+            BoutonQCMMulti(liste[1].answer, { user?.let {
+                gameViewModel.submitAnswer(gameId,
+                    it.username,liste[1].isRight)
+            } }, liste[1].isRight)
+        }
+
+    }
+}
+
+@Composable
+fun DisplayQuestionInput(gameViewModel: InDuelGame, gameId: String, qcm: QCM, user: User?) {
+    val liste = qcm.answers
+    val Questiontxt = qcm.question
+
+    var textValue by remember { mutableStateOf("") }
+
+    PanneauQuestion(Hauteur = 300, Largeur = 350, Questiontxt)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 60.dp),
+        verticalArrangement = Arrangement.Bottom,
+        horizontalAlignment = Alignment.End,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+
+
+            TextField(
+                shape = RoundedCornerShape(20.dp),
+                value = textValue,
+                onValueChange = { textValue = it},
+                modifier = Modifier
+                    .border(5.dp, color = MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)),
+                textStyle = TextStyle(
+                    color = Color.Black, // Définir la couleur du texte
+                    fontFamily = fr.imt.atlantique.codesvi.app.ui.screens.question.fontPrincipale, // Définir la police du texte
+
+                )
+
+                // Définir la couleur de fond en blanc
+            )
+
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ){
+            BoutonQCMMulti("Envoyer",{ user?.let {
+                gameViewModel.submitAnswer(gameId,
+                    it.username,textverification(textValue,liste, qcm.gap))
+            } } , textverification(textValue,liste, qcm.gap))
+        }
+    }
+}
+
+@Composable
 fun ShowQuestion(gameViewModel: InDuelGame, gameId: String, user: User?){
     val questionState by gameViewModel.questionState.collectAsState()
     Background()
     when(questionState) {
-        true -> DisplayQuestion(
-            gameViewModel,
-            gameId,
-            qcm = gameViewModel.questions.value!![gameViewModel.nbQuestion],
-            user
-        )
+        true ->
+
+            if (gameViewModel.questions.value!![gameViewModel.nbQuestion].type == "qcm_4"){
+                DisplayQuestion(
+                    gameViewModel,
+                    gameId,
+                    qcm = gameViewModel.questions.value!![gameViewModel.nbQuestion],
+                    user
+                )
+            }
+            else{
+                if(gameViewModel.questions.value!![gameViewModel.nbQuestion].type == "vf"){
+                    DisplayQuestionVF(gameViewModel,
+                        gameId,
+                        qcm = gameViewModel.questions.value!![gameViewModel.nbQuestion],
+                        user)
+                }
+
+                else{
+                    DisplayQuestionInput(gameViewModel,
+                        gameId,
+                        qcm = gameViewModel.questions.value!![gameViewModel.nbQuestion],
+                        user)
+                }
+
+            }
+
 
 
         false -> {gameViewModel.updateQuestionState();ShowQuestion(gameViewModel, gameId, user)}
