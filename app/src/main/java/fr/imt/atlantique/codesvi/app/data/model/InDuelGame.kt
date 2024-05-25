@@ -17,9 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import timber.log.Timber
-import kotlin.coroutines.resume
 import kotlin.random.Random
 
 
@@ -377,17 +375,17 @@ class InDuelGame() : ViewModel() {
 
                         if (result == "Victoire"){
                             trophies = Random.nextInt(27, 32)
-                            coins = Random.nextInt(30, 41)
+                            coins = Random.nextInt(50, 70)
                         }
 
                         if (result == "Défaite"){
                             trophies = -1 * Random.nextInt(15, 22)
-                            coins = Random.nextInt(10, 30)
+                            coins = Random.nextInt(40, 61)
                         }
 
                         if(result == "Égalité"){
                             trophies = Random.nextInt(1, 4)
-                            coins = Random.nextInt(20, 31)
+                            coins = Random.nextInt(50, 71)
                         }
 
                         gameStat = GameResult(result = result, trophies = trophies, coins = coins, username = username)
