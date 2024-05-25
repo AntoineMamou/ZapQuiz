@@ -23,11 +23,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -73,25 +75,28 @@ class DuelViewModel : ViewModel() {
     fun startNewGame(players: List<User>) {
         val gameIdValue = waitingRoomRef.push().key ?: return
         _gameId.value = gameIdValue
-        val gamePlayers = players.map { Player(it, 0) }
-        val initialRound = 1
-        val questions = generateQuestions()
-        val newGame = Game(gameIdValue, gamePlayers, initialRound, questions, gameState = "waiting")
-        val gameRef = database.getReference("games").child(gameIdValue)
+        viewModelScope.launch {
+            val questions = generateQuestions()
 
-        gameRef.setValue(newGame)
-            .addOnSuccessListener {
-                println("New game started successfully with ID $gameIdValue")
-                gameRef.child("gameState")
-                    .setValue("startGame")  // Mise à jour de l'état du jeu dans Firebase
-                broadcastGameStarted(gameIdValue)
+            val gamePlayers = players.map { Player(it, 0) }
+            val initialRound = 1
+            val newGame =
+                Game(gameIdValue, gamePlayers, initialRound, questions, gameState = "waiting")
+            val gameRef = database.getReference("games").child(gameIdValue)
 
-            }
-            .addOnFailureListener {
-                println("Failed to start new game")
-            }
-
+            gameRef.setValue(newGame)
+                .addOnSuccessListener {
+                    println("New game started successfully with ID $gameIdValue")
+                    gameRef.child("gameState")
+                        .setValue("startGame") // Mise à jour de l'état du jeu dans Firebase
+                    broadcastGameStarted(gameIdValue)
+                }
+                .addOnFailureListener {
+                    println("Failed to start new game")
+                }
+        }
     }
+
 
     private fun broadcastGameStarted(gameId: String) {
         waitingRoomRef.child("gameStarted").setValue(true)
@@ -180,16 +185,18 @@ class DuelViewModel : ViewModel() {
         questionsRef.addListenerForSingleValueEvent(valueEventListener)
     }
 
-    suspend fun getQuestionFromDatabase(theme: String, randomIndex: Int): QCM? {
-        return suspendCoroutine { cont ->
-            val questionsRef = database.getReference("questions/$theme")
+    suspend fun questionFromDatabase(theme: String, randomNumber: Int): QCM? {  //rajoute une variable en fonction du type
+        return suspendCancellableCoroutine { continuation ->
+            val questionsRef = databaseGlobal.getReference("questions/$theme")
 
             val valueEventListener = object : ValueEventListener {
                 override fun onDataChange(dataSnapshot: DataSnapshot) {
                     for (questionSnapshot in dataSnapshot.children) {
                         val questionId = questionSnapshot.key?.toIntOrNull()
-                        Timber.d("ok")
-                        if (questionId == randomIndex) {
+                        println("ca marche")
+                        if (questionId == randomNumber) {
+                            //val question = questionSnapshot.getValue(QCM::class.java)
+
                             val id = questionSnapshot.child("id").getValue(String::class.java)
                             val type = questionSnapshot.child("type").getValue(String::class.java)
                             val category = questionSnapshot.child("category").getValue(String::class.java)
@@ -198,71 +205,61 @@ class DuelViewModel : ViewModel() {
                             val image = questionSnapshot.child("image").getValue(String::class.java)
                             val gap = questionSnapshot.child("gap").getValue(Float::class.java)
                             val explanation = questionSnapshot.child("explanation").getValue(String::class.java)
-
+                            // Récupération de la liste des réponses
                             val answersList = ArrayList<Answer>()
                             val answersSnapshot = questionSnapshot.child("answers")
                             for (answerSnapshot in answersSnapshot.children) {
                                 val answer = answerSnapshot.child("answer").getValue(String::class.java)
                                 val isRight = answerSnapshot.child("isRight").getValue(Boolean::class.java)
                                 if (answer != null && isRight != null) {
-                                    val reponse = Answer(isRight, answer)
+                                    val reponse= Answer(isRight,answer)
                                     answersList.add(reponse)
+
                                 }
                             }
 
-                            val questionToAdd = QCM(
-                                answersList,
-                                id ?: "",
-                                type ?: "",
-                                category ?: "",
-                                level ?: 0,
-                                question2 ?: "",
-                                image ?: "",
-                                gap ?: 0F,
-                                explanation ?: ""
-                            )
-                            cont.resume(questionToAdd)
+                            // Création de l'objet QCM avec les données récupérées
+                            val question = QCM(answersList, id?:"", type?:"", category?:"", level ?: 0, question2 ?: "", image ?: "", gap ?: 0F, explanation ?: "")
+
+                            continuation.resume(question)
                             return
                         }
                     }
-                    cont.resume(null)
+                    continuation.resume(null)
                 }
 
                 override fun onCancelled(databaseError: DatabaseError) {
-                    cont.resumeWithException(databaseError.toException())
+                    continuation.resumeWithException(databaseError.toException())
                 }
             }
 
             questionsRef.addListenerForSingleValueEvent(valueEventListener)
+
+            // Annuler l'écouteur de valeurs lorsque la coroutine est annulée
+            continuation.invokeOnCancellation {
+                questionsRef.removeEventListener(valueEventListener)
+            }
         }
     }
 
     // Function to generate questions
-    fun generateQuestions(): List<QCM> {
-        val questionsList = mutableListOf<QCM>()
-        runBlocking {
+    suspend fun generateQuestions(): List<QCM> {
+        return viewModelScope.async {
             coroutineScope {
                 val jobs = (1..10).map {
                     async {
                         val randomCategory = RandomCategorie()
-                        val questionIndex = Random.nextInt(0, 50)
-                        getQuestionFromDatabase(randomCategory, questionIndex)
+                        val questionIndex = Random.nextInt(1, 50)
+                        questionFromDatabase(randomCategory, questionIndex)
                     }
                 }
                 val results = jobs.awaitAll()
-                questionsList.addAll(results.filterNotNull())
+                println(results)
+                results.filterNotNull()
             }
-        }
-
-        if (questionsList.isEmpty()) {
-            println("No questions found for the given indices.")
-        } else {
-            println("Questions retrieved: ${questionsList.size}")
-        }
-
-        println("Final list of questions: $questionsList")
-        return questionsList
+        }.await()
     }
+
 
 
     private  fun generateQuestions2(): List<QCM> {
@@ -400,6 +397,29 @@ class DuelViewModel : ViewModel() {
                     for (child in snapshot.children) {
                         child.ref.removeValue() // Supprime l'utilisateur de la salle d'attente
                     }
+
+                    // Vérifie si la salle d'attente est vide après avoir supprimé l'utilisateur
+                    waitingRoomRef.child("user").addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            if (!snapshot.exists()) {
+                                // La salle d'attente est vide, donc la supprimer
+                                waitingRoomRef.removeValue().addOnCompleteListener {
+                                    if (it.isSuccessful) {
+                                        println("Waiting room is empty and has been removed successfully")
+                                    } else {
+                                        Timber.e("Failed to remove empty waiting room: ${it.exception?.message}")
+                                    }
+                                }
+                            }
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {
+                            Timber.e("Failed to check waiting room: ${error.message}")
+                        }
+                    })
+
+
+
                     //isUserAddedToWaitingRoom = false
                     navController.navigate(HomeRootScreen.Game.route)
                     println("User removed from waiting room successfully")
