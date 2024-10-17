@@ -1,4 +1,4 @@
-# ZapQuiz
+# ZapQuiz ![logo](app/src/main/res/drawable/logo.png)
 
 ## Jeu de Culture Générale 🧠
 
